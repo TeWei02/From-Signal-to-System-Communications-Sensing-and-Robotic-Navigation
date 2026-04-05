@@ -1,0 +1,349 @@
+\title{From Signal to System: The Intersection of Communications, Sensing, and Robotic Navigation}
+\author{}
+\date{}
+
+\maketitle
+
+\begin{abstract}
+Modern autonomous robotic systems rely on a tightly coupled pipeline that spans raw physical signals,
+digital signal processing, state estimation, motion planning, and wireless communication.
+This report examines the full information-flow chain from sensor acquisition through
+perception and mapping, local planning and embedded control, to communication with
+edge servers or cloud infrastructure, and argues that robotic navigation should be
+understood as an end-to-end communication system subject to bandwidth, latency, and
+noise constraints at every stage.
+We highlight design trade-offs that arise when sensor data must be selectively compressed,
+transmitted, and fused under resource limitations, and we illustrate these ideas through
+a hypothetical multi-robot indoor exploration scenario.
+The goal is to motivate a systems-level perspective that bridges communications engineering
+and robotics, two fields that share a common mathematical vocabulary but are rarely treated together.
+\end{abstract}
+
+% ------------------------------------------------------------------
+\section{Introduction}
+% ------------------------------------------------------------------
+
+Autonomous robotic navigation has historically been studied from a control-theoretic or
+artificial-intelligence perspective, with communication treated as a reliable, high-capacity
+background service.
+In practice, however, real-world deployments increasingly rely on wireless links between
+robots and base stations or edge servers, and the imperfections of those links---bandwidth
+limits, variable latency, and packet loss---have direct and measurable consequences for
+navigation performance.
+Recognizing this dependency motivates a unified view in which a robot is both a
+\emph{sensing platform} and a \emph{communication node}, and where the same engineering
+principles that govern wireless channel capacity govern the quality of the information
+reaching the planning module.
+
+At the core of this perspective is the concept of \emph{information flow}.
+A mobile robot begins by acquiring physical signals through sensors such as LiDAR,
+inertial measurement units (IMUs), and cameras.
+These raw signals are processed, filtered, and fused to produce compact representations
+of the robot's environment and its own pose.
+The processed information then drives a planning and control loop running on an on-board
+embedded processor.
+Simultaneously, selected data may be transmitted over a wireless link to an edge server
+or cloud backend that contributes additional compute capacity, global map knowledge, or
+coordination for multi-robot teams.
+Each step in this chain introduces constraints that the system designer must manage.
+
+This report traces that chain step by step.
+Section~2 covers sensor hardware and raw signal characteristics.
+Section~3 discusses perception algorithms that convert raw data into structured maps and
+pose estimates.
+Section~4 addresses local planning, trajectory generation, and the embedded-compute
+constraints that shape algorithm choices.
+Section~5 analyses the wireless communication layer and its effects on navigation.
+Section~6 examines edge and cloud offloading strategies and the compute--communication
+trade-off.
+Section~7 presents a hypothetical case study of multi-robot exploration under limited
+bandwidth, and Section~8 offers conclusions and future directions.
+
+% ------------------------------------------------------------------
+\section{Sensing and Signal Acquisition}
+% ------------------------------------------------------------------
+
+The sensing layer is the entry point of the information-flow chain, and its physical
+characteristics determine what information is available to every downstream stage.
+LiDAR (Light Detection And Ranging) scanners emit modulated laser pulses and measure
+the time-of-flight of the reflected returns, yielding high-density three-dimensional
+point clouds at update rates of 10--20\,Hz.
+IMUs integrate angular-rate and linear-acceleration measurements at rates of
+100--1000\,Hz, providing high-frequency pose increments but accumulating drift over time.
+Cameras capture two-dimensional intensity or depth images and offer rich semantic
+information at the cost of computational overhead during processing.
+Each sensor has a characteristic noise model---Gaussian range noise for LiDAR, bias
+drift and random walk for IMUs, and photometric noise for cameras---and these models
+propagate forward through the entire pipeline.
+
+A critical concern at this layer is \emph{time synchronization}.
+Sensor streams arriving at different rates and timestamps must be aligned before fusion
+can produce consistent estimates.
+Hardware trigger signals or software-based interpolation schemes are commonly used, but
+any residual misalignment introduces a correlated error that appears as a phantom motion
+of the robot.
+In wireless scenarios where sensor data is logged on the robot and transmitted to a
+remote processor, additional jitter is introduced by the network, making time-stamp
+management even more important.
+
+Signal quality can be characterised by the signal-to-noise ratio
+\(
+  \text{SNR} = \frac{P_s}{P_n},
+\)
+where \(P_s\) is the useful signal power and \(P_n\) the noise power.
+For LiDAR, low SNR arises in rain, fog, or specular surfaces; for cameras it arises in
+low-light or high-dynamic-range scenes.
+Previous works have shown that adaptive sampling strategies---reducing sensor update
+rates when the environment is static, or increasing resolution near obstacles---can
+maintain navigation accuracy while reducing the data volume that must be processed or
+transmitted downstream.
+
+% ------------------------------------------------------------------
+\section{Perception and Mapping: From Raw Data to Representations}
+% ------------------------------------------------------------------
+
+Once raw sensor data is available, the perception layer constructs structured
+representations of the environment that the planning layer can consume.
+The dominant paradigm for mobile robots is \emph{Simultaneous Localization and Mapping}
+(SLAM), in which a robot incrementally builds a map of previously unseen space while
+estimating its own pose within that map.
+At a high level, SLAM can be viewed as a Bayesian filtering problem: the robot maintains
+a probability distribution over its pose \(\mathbf{x}_t\) and map \(\mathbf{m}\),
+updating it with each sensor measurement \(\mathbf{z}_t\) according to
+\(
+  p(\mathbf{x}_t, \mathbf{m} \mid \mathbf{z}_{1:t})
+  \propto
+  p(\mathbf{z}_t \mid \mathbf{x}_t, \mathbf{m})\,
+  p(\mathbf{x}_t \mid \mathbf{x}_{t-1})\,
+  p(\mathbf{x}_{t-1}, \mathbf{m} \mid \mathbf{z}_{1:t-1}).
+\)
+Practical implementations based on factor graphs or particle filters have made
+real-time SLAM feasible on embedded hardware.
+
+For navigation, the map is typically represented as an \emph{occupancy grid}---a
+discrete lattice in which each cell stores the probability of being occupied by an
+obstacle.
+A \emph{costmap} augments the occupancy grid by inflating obstacle cells to reflect the
+robot's physical footprint and safety margins, providing a direct input to the planner.
+LiDAR returns are projected into the grid via ray-casting, while camera-based depth
+estimates provide complementary dense reconstruction, especially in texture-rich indoor
+environments.
+
+\emph{Sensor fusion} integrates heterogeneous streams to produce estimates more accurate
+than any single sensor alone.
+A widely used approach is the Extended Kalman Filter (EKF), which linearises the nonlinear
+observation and motion models at each step.
+IMU measurements supply high-rate attitude and velocity priors, while LiDAR or visual
+odometry provide periodic corrections.
+The quality of the fused estimate degrades gracefully as individual sensors fail or
+become noisy, provided the fusion architecture properly propagates uncertainty.
+Feature extraction---identifying stable landmarks such as corners, planes, or visual
+keypoints---reduces the raw data volume while preserving the geometric information
+needed for robust loop closure and localization.
+
+% ------------------------------------------------------------------
+\section{Local Planning, Control, and On-Board Computation}
+% ------------------------------------------------------------------
+
+With a current pose estimate and a costmap in hand, the planning module must compute
+a collision-free trajectory from the robot's current position to a goal.
+Local planners such as the Dynamic Window Approach (DWA) sample a set of short-horizon
+velocity commands, simulate their effect over a brief prediction horizon, and select the
+command that optimises a cost function of the form
+\(
+  J(\mathbf{v}) = \alpha_1 \, c_{\text{goal}}(\mathbf{v})
+                + \alpha_2 \, c_{\text{obs}}(\mathbf{v})
+                + \alpha_3 \, c_{\text{vel}}(\mathbf{v}),
+\)
+where \(c_{\text{goal}}\) penalises deviation from the goal direction, \(c_{\text{obs}}\)
+penalises proximity to obstacles, and \(c_{\text{vel}}\) encourages smooth velocity
+profiles.
+The weights \(\alpha_i\) are tuning parameters that reflect the designer's priorities.
+More advanced methods use model-predictive control (MPC) to plan over longer horizons
+with formal stability guarantees.
+
+The resulting velocity commands are passed to a feedback controller that closes the loop
+between desired and actual motion.
+At low level, proportional-integral-derivative (PID) controllers adjust motor currents
+to track commanded wheel velocities.
+The entire planning and control stack, together with sensor fusion and map updates,
+typically runs on a single embedded system-on-chip (SoC) such as an ARM Cortex-A series
+processor, a Qualcomm Snapdragon, or an NVIDIA Jetson module.
+These platforms offer a balance between computational throughput and power consumption,
+but they impose real limits on algorithm complexity: a SLAM algorithm that occupies
+80\% of CPU capacity leaves little headroom for communication stack processing or
+emergency replanning.
+
+On-board computation constraints therefore feed back into system design decisions at
+every layer.
+A designer may choose a sparser occupancy grid (lower resolution) to reduce memory
+bandwidth, or may throttle the local planner's sampling rate to stay within a power
+budget.
+Previous works have shown that algorithm complexity and hardware capability must be
+co-designed, especially as robots shrink toward micro-UAV sizes where the available
+compute budget may be as low as a few watts.
+This tight coupling between computation, power, and communication will be revisited in
+Section~6.
+
+% ------------------------------------------------------------------
+\section{Communication in Robotic Navigation Systems}
+% ------------------------------------------------------------------
+
+A robot operating in the field is rarely fully autonomous in the sense of having no
+external dependencies.
+It typically maintains a wireless link to a base station or edge server for telemetry,
+map sharing, task updates, or remote-operation fallback.
+Common link technologies range from IEEE 802.11 Wi-Fi (low latency in a known
+environment, limited range) to 4G/5G cellular (broader coverage, variable delay and
+jitter) and proprietary mesh protocols for multi-robot teams.
+Regardless of the physical layer, the link can be characterised by three parameters
+that directly affect navigation: available bandwidth \(B\), round-trip latency \(\tau\),
+and packet loss rate \(p_{\ell}\).
+
+Bandwidth limits the rate at which data can be transferred between robot and server.
+A single full-resolution LiDAR scan of 100\,000 points at 4 bytes per coordinate
+requires approximately 1.2\,Mbps at 10\,Hz, which is non-trivial for a congested
+Wi-Fi network or a cell with several other users.
+Sending raw point clouds is therefore often impractical; instead, the robot transmits
+compressed or pre-processed representations---downsampled point clouds, occupancy map
+updates, or pose estimates only---at the cost of information loss.
+The choice between raw and processed data transmission constitutes one of the central
+design trade-offs in networked robotic systems.
+
+Latency introduces a temporal mismatch between the state of the environment at the
+time of sensing and the time at which a command or map update computed remotely is
+acted upon.
+If the robot is moving at speed \(v\) and the round-trip latency is \(\tau\), the robot
+has moved approximately \(v\tau\) from the position assumed when the command was
+computed, leading to tracking error.
+For a robot moving at \(0.5\,\text{m/s}\) with \(\tau = 200\,\text{ms}\), this dead-band
+displacement is \(0.1\,\text{m}\)---already significant in a corridor environment.
+Packet loss forces retransmission or interpolation and can cause sudden discontinuities
+in the received data stream that manifest as jumps in localization quality.
+Previous works have demonstrated that navigation error increases roughly linearly with
+mean latency in the low-latency regime and degrades more steeply once \(\tau\) exceeds a
+system-dependent threshold.
+
+% ------------------------------------------------------------------
+\section{Edge/Cloud Offloading and System-Level Trade-offs}
+% ------------------------------------------------------------------
+
+Edge computing places servers with moderate compute capacity at the network edge---for
+example, in a building's Wi-Fi access point or a 5G base station's co-located server.
+This topology reduces the round-trip latency compared with a remote cloud datacenter
+(typically 5--20\,ms to an edge server vs.\ 50--150\,ms to a cloud) while providing
+more processing power than the robot's on-board SoC.
+Computationally intensive tasks such as global path planning, dense 3-D reconstruction,
+deep-learning-based object detection, or multi-robot map merging are natural candidates
+for offloading.
+
+The \emph{compute--communication trade-off} governs this partitioning.
+Sending richer data to the edge yields higher-quality results but consumes more
+bandwidth; processing locally avoids network overhead but is constrained by on-board
+power and compute.
+A useful formalism is to model the total cost as
+\(
+  C = C_{\text{local}}(\lambda) + C_{\text{comm}}(\lambda) + C_{\text{edge}}(\lambda),
+\)
+where \(\lambda\) is a parameter describing how much computation is offloaded, and
+each term captures the latency, energy, or accuracy cost of local processing,
+communication, and remote processing respectively.
+Optimal \(\lambda\) balances these three costs and is a function of network conditions,
+task deadline, and battery state---all time-varying quantities.
+
+From a communications standpoint, the data sent to the edge is a form of \emph{source
+coding}: the robot must compress its sensor observations to fit the available channel.
+A natural metric is the \emph{rate-distortion} perspective: how much navigation
+performance (distortion) degrades as the transmission rate decreases.
+Previous works have shown that sending semantically compressed updates---for example,
+changed cells in an occupancy grid rather than a full map snapshot---can achieve
+substantial bandwidth savings with minimal impact on downstream planning quality.
+As 5G and eventually 6G networks lower latency and raise throughput, the boundary of
+what can practicably be offloaded will shift outward, enabling more robots to depend on
+edge resources for safety-critical functions.
+
+% ------------------------------------------------------------------
+\section{Case Study: Multi-Robot Exploration with Limited Bandwidth}
+% ------------------------------------------------------------------
+
+To make the preceding discussion concrete, consider a hypothetical scenario of two
+ground robots tasked with exploring an unknown indoor environment---a floor of a
+building with corridors, rooms, and doors---while communicating over a shared Wi-Fi
+access point that provides a total uplink bandwidth of 2\,Mbps to a central edge server.
+Each robot is equipped with a 2-D LiDAR, an IMU, and an ARM-class on-board computer.
+The server runs a coordinator that assigns exploration frontiers and maintains a merged
+global map.
+
+\subsection*{Strategy A: Full Map Upload}
+
+In the first strategy, each robot continuously uploads its full local occupancy grid
+(a \(200 \times 200\) cell map at 1-byte-per-cell, serialised and compressed with
+lossless compression) at 5\,Hz.
+After compression, each map update is approximately 20\,kB, giving a per-robot uplink
+demand of roughly 800\,kbps.
+Two robots together consume 1.6\,Mbps, leaving 400\,kbps margin.
+The server merges the two maps at each update cycle and rebroadcasts frontier
+assignments back to the robots.
+This strategy yields the highest map fidelity at the server but leaves little room
+for sensor telemetry or command traffic, and any increase in map resolution or number
+of robots quickly saturates the channel.
+
+\subsection*{Strategy B: Sparse Differential Updates}
+
+In the second strategy, each robot sends only the \emph{cells that have changed}
+since the last transmitted update, together with its current pose estimate.
+In a typical exploration scenario, the frontier of newly explored space is a thin
+boundary; empirically, fewer than 5\% of cells change between consecutive scans.
+This reduces the per-update payload to roughly 1\,kB, or about 40\,kbps per robot at
+5\,Hz, a reduction of approximately \(20\times\).
+The saved bandwidth can be reallocated to higher-frequency pose updates or video
+thumbnails for remote monitoring.
+The cost is that the server's merged map is less consistent: if a robot revisits a
+previously explored area and closes a loop, the correction propagates only through the
+changed-cell diff, which may leave residual inconsistencies until a full resync is
+triggered.
+
+\subsection*{Discussion}
+
+A simple coverage metric, defined as the fraction of reachable cells that have been
+observed, allows quantitative comparison of the two strategies under a simulated
+bandwidth bottleneck.
+Previous works have shown that differential update schemes can maintain within
+5--10\% of the coverage rate of full-upload schemes while using a fraction of the
+bandwidth, provided the server applies lightweight map-merging heuristics.
+The latency introduced by packet queuing under Strategy A during periods of high
+channel load can cause the robots to act on stale frontier assignments, reducing
+coverage efficiency; Strategy B, being leaner, suffers less from this effect.
+This case study illustrates the broader point: the choice of data representation and
+transmission policy is not a peripheral concern but a first-class system design decision
+that materially affects navigation performance.
+
+% ------------------------------------------------------------------
+\section{Conclusion and Future Work}
+% ------------------------------------------------------------------
+
+This report has traced the information-flow pipeline of an autonomous mobile robot from
+physical signal acquisition, through perception and mapping, through on-board planning
+and control, and into the wireless communication layer connecting the robot to edge or
+cloud infrastructure.
+At each stage, engineering constraints---sensor noise, compute budgets, bandwidth limits,
+and latency---interact in ways that cannot be addressed by optimising any single component
+in isolation.
+The central argument is that robotic navigation is properly understood as a
+\emph{communication system}: information must be acquired, encoded, transmitted, and
+decoded under resource constraints, and degradation in any link of the chain propagates
+to navigation performance.
+
+Several directions appear promising for future work.
+First, the integration of \emph{semantic communication} ideas---transmitting task-relevant
+features rather than raw sensor data---offers a principled way to reduce bandwidth
+while preserving navigation-relevant information.
+Second, \emph{learning-based compression} methods trained end-to-end on a navigation
+performance objective may outperform hand-crafted compression schemes.
+Third, as 5G and 6G infrastructure matures, the availability of ultra-low-latency
+network slices could enable safety-critical control loops to be partially closed over
+the wireless link, fundamentally changing the architecture of autonomous systems.
+Finally, multi-robot coordination under heterogeneous connectivity---where some robots
+have reliable links while others are intermittently connected---raises open research
+questions about asynchronous map merging and distributed planning that sit squarely at
+the intersection of communications engineering and robotics.
