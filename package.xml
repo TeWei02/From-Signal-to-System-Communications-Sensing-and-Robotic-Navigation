@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+    <name>from_signal_to_system</name>
+    <version>0.1.0</version>
+    <description>
+    A mini-research project exploring the intersection of wireless communications,
+    robotic sensing, perception, and autonomous navigation.
+    
+    Includes simulation, planning, control, and communication modules.
+    </description>
+
+    <maintainer email="research@example.com">Robotics Team</maintainer>
+    <license>MIT</license>
+
+    <url type="website">https://github.com/TeWei02/From-Signal-to-System-Communications-Sensing-and-Robotic-Navigation</url>
+    <url type="repository">https://github.com/TeWei02/From-Signal-to-System-Communications-Sensing-and-Robotic-Navigation</url>
+
+    <!-- ROS2 build and runtime dependencies -->
+    <buildtool_depend>ament_cmake</buildtool_depend>
+
+    <!-- Core ROS2 dependencies -->
+    <depend>rclcpp</depend>
+    <depend>rclpy</depend>
+    <depend>std_msgs</depend>
+    <depend>std_srvs</depend>
+    <depend>geometry_msgs</depend>
+    <depend>nav_msgs</depend>
+    <depend>sensor_msgs</depend>
+    <depend>tf2</depend>
+
+    <!-- Python dependencies (see requirements.txt for pip installs) -->
+    <!-- Perception / SLAM -->
+    <depend>cv_bridge</depend>
+    <depend>image_transport</depend>
+
+    <!-- Optional: Advanced perception -->
+    <!-- <depend>pcl_conversions</depend> -->
+    <!-- <depend>pcl_ros</depend> -->
+    <!-- <depend>depthimage_to_laserscan</depend> -->
+
+    <build_depend>ament_cmake_gtest</build_depend>
+    <test_depend>ament_lint_auto</test_depend>
+    <test_depend>ament_lint_common</test_depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>

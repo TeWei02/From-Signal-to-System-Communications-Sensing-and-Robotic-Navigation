@@ -1,0 +1,109 @@
+<?xml version="1.0"?>
+<!--
+office_world.sdf
+----------------
+Gazebo / SDF (Simulation Description Format) definition of an office building
+with corridors, walls, and furniture obstacles.
+
+Used by the physics simulator to:
+  - Define static obstacles for collision checking
+  - Provide LiDAR ray-casting environment
+  - Specify lighting and visual properties
+
+This is a simplified representation; a full model would include:
+  - Detailed mesh geometry for walls, doors, furniture
+  - Physics properties (friction, restitution)
+  - Sensor mounting fixtures
+-->
+<sdf version="1.6">
+  <world name="office_world">
+    
+    <!-- Global physics -->
+    <physics type="ode">
+      <gravity>0 0 -9.8</gravity>
+      <ode>
+        <solver>
+          <type>quick</type>
+          <iters>50</iters>
+        </solver>
+      </ode>
+    </physics>
+    
+    <!-- Global light -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.9 0.9 0.9 1</specular>
+      <direction>0.0 0.1 -0.9</direction>
+    </light>
+    
+    <!-- Ground plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+          </material>
+        </visual>
+      </link>
+    </model>
+    
+    <!-- TODO: Add corridor walls
+         - North wall (y = 10, x in [0, 20])
+         - South wall (y = 0, x in [0, 20])
+         - West wall (x = 0, y in [0, 10])
+         - East wall (x = 20, y in [0, 10])
+    -->
+    
+    <!-- Wall: north corridor -->
+    <model name="wall_north">
+      <static>true</static>
+      <link name="wall">
+        <collision>
+          <geometry>
+            <box>
+              <size>20 0.2 3</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual>
+          <pose>0 0 1.5 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>20 0.2 3</size>
+            </box>
+          </geometry>
+          <material>
+            <color>
+              <r>0.7</r>
+              <g>0.7</g>
+              <b>0.7</b>
+            </color>
+          </material>
+        </visual>
+      </link>
+      <pose>10 10 0 0 0 0</pose>
+    </model>
+    
+    <!-- TODO: Add interior obstacles (desks, cabinets) at key locations
+         e.g., <model name="obstacle_01"> ... </model>
+    -->
+    
+  </world>
+</sdf>

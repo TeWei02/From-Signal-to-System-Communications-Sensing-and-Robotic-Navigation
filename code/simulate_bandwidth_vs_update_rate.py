@@ -8,6 +8,8 @@ representations (raw point cloud, compressed map, sparse diff).
 Figure produced: figures/bandwidth_vs_update_rate.pdf
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false
+
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -57,8 +59,8 @@ def compute_max_update_rate(bandwidth_bps: float, payload_bytes: int) -> float:
 
 def simulate_bandwidth_sweep(
     bandwidth_range_mbps: np.ndarray,
-    payload_sizes: dict,
-) -> dict:
+    payload_sizes: dict[str, int],
+) -> dict[str, np.ndarray]:
     """
     For each representation scheme and each bandwidth value, compute the
     maximum achievable update rate.
@@ -92,7 +94,7 @@ def simulate_bandwidth_sweep(
 # Plotting
 # ---------------------------------------------------------------------------
 
-def plot_results(bandwidth_range_mbps: np.ndarray, results: dict) -> None:
+def plot_results(bandwidth_range_mbps: np.ndarray, results: dict[str, np.ndarray]) -> None:
     """
     Plot update rate vs. bandwidth for all representation schemes.
 

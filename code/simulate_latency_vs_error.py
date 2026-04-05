@@ -13,9 +13,12 @@ noise modelling network jitter.
 Figure produced: figures/latency_vs_error.pdf
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false
+
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+from typing import Optional
 
 
 # ---------------------------------------------------------------------------
@@ -53,11 +56,11 @@ def dead_band_error(latency_s: float, speed_ms: float) -> float:
 
 def simulate_latency_sweep(
     latency_range_ms: np.ndarray,
-    speeds_ms: list,
+    speeds_ms: list[float],
     jitter_std_ms: float = 5.0,
     n_samples: int = 100,
-    rng: np.random.Generator = None,
-) -> dict:
+    rng: Optional[np.random.Generator] = None,
+) -> dict[float, dict[str, np.ndarray]]:
     """
     For each speed and each latency value, compute mean position error
     averaged over random jitter realisations.
@@ -110,7 +113,7 @@ def simulate_latency_sweep(
 # Plotting
 # ---------------------------------------------------------------------------
 
-def plot_results(latency_range_ms: np.ndarray, results: dict) -> None:
+def plot_results(latency_range_ms: np.ndarray, results: dict[float, dict[str, np.ndarray]]) -> None:
     """
     Plot mean navigation error (with ±1σ band) vs. latency for each speed.
 
@@ -131,13 +134,7 @@ def plot_results(latency_range_ms: np.ndarray, results: dict) -> None:
         std = data["std"]
         label = f"v = {speed} m/s"
         ax.plot(latency_range_ms, mean, color=color, linewidth=2, label=label)
-        ax.fill_between(
-            latency_range_ms,
-            mean - std,
-            mean + std,
-            color=color,
-            alpha=0.15,
-        )
+        ax.fill_between(latency_range_ms, mean - std, mean + std, color=color, alpha=0.15)  # pyright: ignore[reportArgumentType]
 
     ax.set_xlabel("Round-Trip Latency (ms)")
     ax.set_ylabel("Position Error (m)")

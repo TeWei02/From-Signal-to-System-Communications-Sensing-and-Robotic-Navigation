@@ -16,6 +16,8 @@ References:
     Thrun, Burgard, Fox, "Probabilistic Robotics", Chapter 9 (2005).
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false, reportPossiblyUnboundVariable=false, reportUnusedImport=false
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -23,6 +25,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
+ros2_available = False
 try:
     import rclpy
     from rclpy.node import Node
@@ -30,9 +33,9 @@ try:
     from geometry_msgs.msg import Pose
     from sensor_msgs.msg import PointCloud2
     from nav_msgs.msg import Odometry
-    _ROS2_AVAILABLE = True
+    ros2_available = True
 except ImportError:
-    _ROS2_AVAILABLE = False
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +53,7 @@ def log_odds(p: float) -> float:
     return float(np.log(p / (1.0 - p + 1e-12)))
 
 
-def probability(l: float) -> float:
+def probability(l: float | np.ndarray) -> float | np.ndarray:
     """Convert log-odds to probability."""
     return 1.0 / (1.0 + np.exp(-l))
 
@@ -210,7 +213,7 @@ class OccupancyGridMapper:
         TODO:
             - Set header stamp from ROS clock.
         """
-        if not _ROS2_AVAILABLE:
+        if not ros2_available:
             raise RuntimeError("ROS2 not available.")
         msg = OccupancyGrid()
         msg.header.frame_id = frame_id
@@ -220,7 +223,7 @@ class OccupancyGridMapper:
         msg.info.origin.position.x = self._cfg.origin_x
         msg.info.origin.position.y = self._cfg.origin_y
 
-        prob = probability(self.log_odds_grid)  # (rows, cols) in [0, 1]
+        prob = np.asarray(probability(self.log_odds_grid), dtype=np.float32)  # (rows, cols) in [0, 1]
         # Map to ROS convention: -1 unknown, 0–100 probability × 100
         ros_data = np.where(
             np.abs(self.log_odds_grid) < 0.01,
@@ -230,7 +233,7 @@ class OccupancyGridMapper:
         msg.data = ros_data
         return msg
 
-    def get_diff(self) -> dict:
+    def get_diff(self) -> dict[str, object]:
         """Return cells changed since the last call to get_diff().
 
         Returns:
@@ -284,9 +287,9 @@ class OccupancyGridMapper:
 # ROS2 node
 # ---------------------------------------------------------------------------
 
-if _ROS2_AVAILABLE:
+if ros2_available:
 
-    class OccupancyGridMapperNode(Node):
+    class OccupancyGridMapperNode(Node):  # pyright: ignore[reportUntypedBaseClass]
         """ROS2 node wrapping OccupancyGridMapper.
 
         TODO:
@@ -313,7 +316,7 @@ if _ROS2_AVAILABLE:
 
 
 def main() -> None:
-    if not _ROS2_AVAILABLE:
+    if not ros2_available:
         print("rclpy not available.")
         return
     rclpy.init()

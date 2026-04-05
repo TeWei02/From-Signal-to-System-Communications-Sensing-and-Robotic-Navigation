@@ -20,6 +20,8 @@ References:
     People Behavior Measurement", Advanced Robotics, 2019.  (GICP-based front-end)
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false, reportPossiblyUnboundVariable=false, reportUnusedImport=false
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -27,6 +29,7 @@ from typing import Optional, List
 
 import numpy as np
 
+ros2_available = False
 try:
     import rclpy
     from rclpy.node import Node
@@ -36,9 +39,9 @@ try:
     from nav_msgs.msg import Odometry, OccupancyGrid
     from geometry_msgs.msg import PoseWithCovarianceStamped, TransformStamped
     from tf2_ros import TransformBroadcaster
-    _ROS2_AVAILABLE = True
+    ros2_available = True
 except ImportError:
-    _ROS2_AVAILABLE = False
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -141,9 +144,9 @@ class Submap:
 # ROS2 SLAM front-end node
 # ---------------------------------------------------------------------------
 
-if _ROS2_AVAILABLE:
+if ros2_available:
 
-    class SlamFrontendNode(Node):
+    class SlamFrontendNode(Node):  # pyright: ignore[reportUntypedBaseClass]
         """SLAM front-end: scan-matching, submap management, pose publishing.
 
         Parameters (ROS2 param server):
@@ -230,7 +233,7 @@ if _ROS2_AVAILABLE:
 
 
 def main() -> None:
-    if not _ROS2_AVAILABLE:
+    if not ros2_available:
         print("rclpy not available.")
         return
     rclpy.init()

@@ -21,6 +21,8 @@ Publishes:
     /robot/imu/filtered     sensor_msgs/Imu         200 Hz
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false, reportPossiblyUnboundVariable=false, reportUnusedImport=false
+
 from __future__ import annotations
 
 import math
@@ -29,15 +31,16 @@ from typing import Optional
 
 import numpy as np
 
+ros2_available = False
 try:
     import rclpy
     from rclpy.node import Node
     from sensor_msgs.msg import Imu
     from nav_msgs.msg import Odometry
     from geometry_msgs.msg import PoseStamped
-    _ROS2_AVAILABLE = True
+    ros2_available = True
 except ImportError:
-    _ROS2_AVAILABLE = False
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -192,9 +195,9 @@ class NavigationEKF:
 # ROS2 node
 # ---------------------------------------------------------------------------
 
-if _ROS2_AVAILABLE:
+if ros2_available:
 
-    class ImuFusionNode(Node):
+    class ImuFusionNode(Node):  # pyright: ignore[reportUntypedBaseClass]
         """ROS2 node that fuses IMU and wheel odometry into a smoothed pose.
 
         TODO:
@@ -244,7 +247,7 @@ if _ROS2_AVAILABLE:
 
 
 def main() -> None:
-    if not _ROS2_AVAILABLE:
+    if not ros2_available:
         print("rclpy not available — cannot run as a ROS2 node.")
         return
     rclpy.init()

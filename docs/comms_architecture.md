@@ -108,3 +108,59 @@ over UDP/TCP.
 
 For offline analysis, `analysis/plot_latency_vs_nav_error.py` sweeps the `base_latency_ms`
 parameter and records navigation error, reproducing the latency–error trade-off curves.
+
+## Adaptive QoS Management
+
+The system includes an `AdaptiveQoSManager` (in `src/comms/qos_models.py`) that selects
+or adjusts QoS profiles based on observed link conditions:
+
+- **High-bandwidth, low-latency profile**: For real-time control (sensor → local planning)
+- **Medium-bandwidth profile**: For incremental map updates (sparse diffs)
+- **Low-bandwidth, high-latency profile**: For full-map batch uploads or best-effort logging
+
+If the observed bandwidth drops below the profile's target, the manager automatically
+escalates compression (from sparse diff to heavy lossy compression) and increases the
+acceptable latency budget.
+
+## Communication Flow Diagram
+
+```
+Robot                          Edge Link                      Base Station
+──────                         ────────                       ────────────
+
+Perception ──┐
+             ├─► Compress ──► Link Simulator ──► Decompress ──► Map Fusion
+Mapping ─────┤  (sparse diff)  (bandwidth limit)               (multi-robot
+             │               (latency, loss)    ◄─ ACK         merge)
+             │
+             └─► Telemetry ──► Priority Queue  ──► Base Logging
+                 (low priority)                    & Analysis
+
+
+< Lower priority >  < Link-limited >  < High priority >
+  Diagnostic logs    Token bucket     Map updates
+  Camera streams     Rate limiter      Planning cmds
+```
+
+## Recovery and Reliability
+
+- **Transient link failures**: If no ACK is received within a timeout, the outgoing
+  message is re-queued with exponential backoff.
+- **Map synchronization**: Periodic full-map uploads (every 10 incremental updates)
+  ensure that the base station can recover from missed diffs.
+- **Graceful degradation**: If the uplink becomes unavailable, the robot falls back to
+  pure onboard SLAM and local planning. It re-establishes contact with the base station
+  as soon as the link returns.
+
+## Bandwidth Budget Allocation
+
+A typical 2 Mbps downlink might be allocated as:
+
+| Stream | Allocated | Use Case |
+|--------|-----------|----------|
+| Map diffs (sparse) | 1.2 Mbps | Occupancy grid updates |
+| Odometry | 0.5 Mbps | Robot pose + velocity |
+| Planning updates | 0.2 Mbps | Waypoint refs, path diffs |
+| Diagnostics | 0.1 Mbps | Health, battery, feature counts |
+
+This is a rough split; actual allocation can be tuned per scenario via YAML config files.

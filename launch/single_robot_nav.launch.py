@@ -16,7 +16,9 @@ Brings up:
   - RViz2 visualizer (nav_debug.rviz)
 """
 
-from launch import LaunchDescription
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false, reportUnusedImport=false
+
+from launch import LaunchDescription  # type: ignore
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,

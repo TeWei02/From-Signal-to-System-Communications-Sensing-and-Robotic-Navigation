@@ -1,0 +1,78 @@
+# mobile_base.config.yaml
+# ========================
+# Configuration template for a differential-drive mobile robot base.
+#
+# This file specifies:
+#   - Kinematics (wheelbase, max velocity, acceleration limits)
+#   - Sensor mounting (LiDAR, IMU, wheel encoders)
+#   - Motor specifications (torque limits, response time)
+#   - Battery and power
+
+robot:
+  name: "mobile_base_v2"
+  base_type: "differential_drive"
+  
+  # Mechanical specs
+  wheelbase_m: 0.35      # Distance between drive wheels
+  wheel_radius_m: 0.05   # Wheel radius
+  mass_kg: 15.0
+  
+  # Driving constraints
+  max_linear_velocity_ms: 1.5      # Max forward speed
+  max_angular_velocity_rads: 3.14  # Max turning rate (~180°/s)
+  max_linear_accel_ms2: 2.0
+  max_angular_accel_rads2: 5.0
+  
+  # Motor specifications
+  motor:
+    type: "brushless_dc"
+    max_torque_nm: 2.0
+    no_load_rpm: 300
+    gearbox_ratio: 10.0
+  
+  # Sensors
+  sensors:
+    lidar:
+      model: "Livox Avia"     # 3D LiDAR (alternatively, 2D scanning LiDAR)
+      max_range_m: 30
+      num_channels: 4         # 4 returns in a single frame
+      frame_rate_hz: 10
+      field_of_view_deg: 360
+    
+    imu:
+      model: "MPU6050 / BNO055"
+      accel_range_ms2: 16     # ±16 m/s^2 range
+      gyro_range_rads: 2000   # ±2000°/s range (degrees/s * π/180)
+      publish_rate_hz: 100
+    
+    odometry:
+      type: "wheel_encoder"
+      ticks_per_meter: 1000   # Encoder resolution
+      sample_rate_hz: 50
+  
+  # Battery
+  battery:
+    nominal_voltage_v: 24.0
+    capacity_ah: 10.0
+    nominal_discharge_a: 20.0   # Typical operating current
+  
+  # Communications
+  communication:
+    wifi:
+      standard: "802.11ac"      # WiFi 5 / WiFi 6 capable
+      max_bandwidth_mbps: 50
+    cellular:
+      standard: "4G LTE / 5G"
+      max_bandwidth_mbps: 30
+
+control:
+  # PID gains for velocity tracking
+  pid:
+    kp: 2.0    # Proportional gain
+    ki: 0.1    # Integral gain
+    kd: 0.5    # Derivative gain
+  
+  # Motor saturation limits
+  motor:
+    max_duty_cycle: 0.95     # Don't saturate completely to allow transient response
+    stall_current_a: 50.0    # Stall current (safety limit)

@@ -16,9 +16,12 @@ Output metric: coverage fraction over time (fraction of reachable cells explored
 Figure produced: figures/multi_robot_coverage.pdf
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false
+
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+from typing import Optional
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +46,7 @@ DIFF_BUDGET_CELLS_PER_STEP = int(0.05 * GRID_ROWS * GRID_COLS)  # 5% of cells
 # ---------------------------------------------------------------------------
 
 def build_grid(rows: int, cols: int, obstacle_prob: float = 0.15,
-               rng: np.random.Generator = None) -> np.ndarray:
+               rng: Optional[np.random.Generator] = None) -> np.ndarray:
     """
     Create a binary occupancy grid (0 = free, 1 = obstacle).
     Border cells are always free; interior cells are obstacles with
@@ -74,12 +77,12 @@ def build_grid(rows: int, cols: int, obstacle_prob: float = 0.15,
     return grid
 
 
-def free_cells(grid: np.ndarray) -> list:
+def free_cells(grid: np.ndarray) -> list[tuple[int, int]]:
     """Return list of (row, col) tuples for all free cells."""
     return list(zip(*np.where(grid == 0)))
 
 
-def neighbours(pos: tuple, grid: np.ndarray) -> list:
+def neighbours(pos: tuple[int, int], grid: np.ndarray) -> list[tuple[int, int]]:
     """Return list of free 4-connected neighbour positions of `pos`."""
     r, c = pos
     rows, cols = grid.shape
@@ -109,7 +112,7 @@ class Robot:
         Snapshot of local_map at the time of the last transmission.
     """
 
-    def __init__(self, start_pos: tuple, grid: np.ndarray):
+    def __init__(self, start_pos: tuple[int, int], grid: np.ndarray):
         self.pos = start_pos
         rows, cols = grid.shape
         self.local_map = np.zeros((rows, cols), dtype=np.uint8)
@@ -189,11 +192,11 @@ class EdgeServer:
 def run_simulation(
     strategy: str,
     grid: np.ndarray,
-    start_positions: list,
+    start_positions: list[tuple[int, int]],
     n_steps: int,
     budget_cells_per_step: int,
     rng: np.random.Generator,
-) -> list:
+) -> list[float]:
     """
     Run the exploration simulation for a given strategy.
 
@@ -265,8 +268,8 @@ def run_simulation(
 # ---------------------------------------------------------------------------
 
 def plot_coverage(
-    coverage_full: list,
-    coverage_diff: list,
+    coverage_full: list[float],
+    coverage_diff: list[float],
     n_steps: int,
 ) -> None:
     """
