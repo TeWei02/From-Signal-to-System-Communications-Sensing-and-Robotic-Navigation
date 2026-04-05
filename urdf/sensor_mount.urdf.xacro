@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<!--
+  sensor_mount.urdf.xacro
+  -----------------------
+  Describes the sensor tower that attaches to the top of mobile_base.
+  Contains:
+    - sensor_mount_link  : aluminium extrusion bracket
+    - lidar_link         : 3-D LiDAR origin (velodyne-style, z-up)
+    - camera_link        : forward-facing camera optical frame
+    - camera_optical_link: optical frame with z-forward convention
+
+  TODO:
+    - Add Gazebo sensor plugins for LiDAR and camera
+    - Parameterise lidar height to support different tower configurations
+-->
+<robot name="sensor_mount" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="mount_h"      value="0.18"/>   <!-- tower height, m -->
+  <xacro:property name="lidar_h"      value="0.04"/>   <!-- lidar body height -->
+  <xacro:property name="lidar_r"      value="0.052"/>  <!-- lidar body radius -->
+  <xacro:property name="camera_w"     value="0.025"/>
+  <xacro:property name="camera_h"     value="0.025"/>
+  <xacro:property name="camera_d"     value="0.045"/>
+  <xacro:property name="pi"           value="3.14159265358979"/>
+
+  <!-- ============================================================ -->
+  <!-- Sensor mount bracket                                          -->
+  <!-- ============================================================ -->
+  <link name="sensor_mount_link">
+    <visual>
+      <geometry>
+        <box size="0.04 0.04 ${mount_h}"/>
+      </geometry>
+      <material name="silver">
+        <color rgba="0.8 0.8 0.8 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.04 0.04 ${mount_h}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.15"/>
+      <inertia ixx="5e-4" ixy="0" ixz="0" iyy="5e-4" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <!-- This joint is declared relative to base_link; include from mobile_base.urdf.xacro -->
+  <joint name="sensor_mount_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="sensor_mount_link"/>
+    <origin xyz="0 0 0.06" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- LiDAR link                                                    -->
+  <!-- ============================================================ -->
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="${lidar_r}" length="${lidar_h}"/>
+      </geometry>
+      <material name="dark_grey">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${lidar_r}" length="${lidar_h}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.83"/>
+      <inertia ixx="2e-3" ixy="0" ixz="0" iyy="2e-3" iyz="0" izz="1e-3"/>
+    </inertial>
+  </link>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="sensor_mount_link"/>
+    <child  link="lidar_link"/>
+    <origin xyz="0 0 ${mount_h/2 + lidar_h/2}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- Camera link                                                   -->
+  <!-- ============================================================ -->
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <box size="${camera_d} ${camera_w} ${camera_h}"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0.0 0.3 0.8 1.0"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+    </inertial>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="sensor_mount_link"/>
+    <child  link="camera_link"/>
+    <origin xyz="0.04 0 ${mount_h/4}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Camera optical frame: z-forward, x-right, y-down -->
+  <link name="camera_optical_link"/>
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child  link="camera_optical_link"/>
+    <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+  </joint>
+
+</robot>

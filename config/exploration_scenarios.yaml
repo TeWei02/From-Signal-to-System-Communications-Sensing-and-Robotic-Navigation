@@ -1,0 +1,66 @@
+# exploration_scenarios.yaml
+# Predefined exploration experiment configurations.
+# Loaded by sim/sim_runner.py and the multi-robot launch file.
+
+scenarios:
+
+  - name: "indoor_corridor_2robots"
+    description: "Two robots explore a corridor-heavy office layout with moderate bandwidth."
+    world: "office_world"
+    n_robots: 2
+    robot_start_poses:
+      - {x: 1.0, y: 1.0, yaw: 0.0}
+      - {x: 1.0, y: 3.0, yaw: 0.0}
+    max_steps: 300
+    bandwidth_bps: 500000
+    base_latency_ms: 30.0
+    packet_loss_rate: 0.02
+    map_update_strategy: "sparse_diff"  # options: full_map, sparse_diff
+    goal: "full_coverage"
+    coverage_threshold: 0.90            # stop when 90% of free cells are visited
+
+  - name: "warehouse_4robots_limited_bw"
+    description: "Four robots in an open warehouse with severely constrained uplink (100 kbps)."
+    world: "warehouse_world"
+    n_robots: 4
+    robot_start_poses:
+      - {x: 2.0, y: 2.0, yaw: 0.0}
+      - {x: 2.0, y: 8.0, yaw: 1.57}
+      - {x: 8.0, y: 2.0, yaw: -1.57}
+      - {x: 8.0, y: 8.0, yaw: 3.14}
+    max_steps: 500
+    bandwidth_bps: 100000
+    base_latency_ms: 80.0
+    packet_loss_rate: 0.05
+    map_update_strategy: "sparse_diff"
+    goal: "full_coverage"
+    coverage_threshold: 0.85
+
+  - name: "multi_floor_2robots"
+    description: "Two robots navigating across two floors connected by a ramp; tests vertical map merging."
+    world: "multi_floor_world"
+    n_robots: 2
+    robot_start_poses:
+      - {x: 1.5, y: 1.5, yaw: 0.0}
+      - {x: 1.5, y: 5.5, yaw: 0.0}
+    max_steps: 600
+    bandwidth_bps: 250000
+    base_latency_ms: 40.0
+    packet_loss_rate: 0.03
+    map_update_strategy: "full_map"
+    goal: "full_coverage"
+    coverage_threshold: 0.80
+
+  - name: "single_robot_benchmark"
+    description: "Baseline single-robot run used to calibrate coverage metrics."
+    world: "office_world"
+    n_robots: 1
+    robot_start_poses:
+      - {x: 1.0, y: 1.0, yaw: 0.0}
+    max_steps: 400
+    bandwidth_bps: 10000000   # effectively unlimited
+    base_latency_ms: 5.0
+    packet_loss_rate: 0.0
+    map_update_strategy: "full_map"
+    goal: "full_coverage"
+    coverage_threshold: 0.95

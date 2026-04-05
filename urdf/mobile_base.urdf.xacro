@@ -1,0 +1,142 @@
+<?xml version="1.0"?>
+<!--
+  mobile_base.urdf.xacro
+  ----------------------
+  Xacro macro describing the differential-drive mobile base.
+
+  Key links:
+    - base_footprint  : virtual 2-D projection on the ground plane
+    - base_link       : geometric centre of the robot chassis
+    - left_wheel      : left drive wheel
+    - right_wheel     : right drive wheel
+    - caster_front    : front passive caster
+    - caster_rear     : rear passive caster
+    - imu_link        : IMU sensor frame (mounted near CoM)
+    - lidar_link      : LiDAR sensor frame (top of sensor mount, see sensor_mount.urdf.xacro)
+    - camera_link     : forward-facing camera
+
+  TODO:
+    - Add Gazebo differential drive plugin (<plugin name="diff_drive" …>)
+    - Add ground truth pose plugin for sim evaluation
+    - Add encoder noise model to wheel joints
+-->
+<robot name="mobile_base" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ============================================================ -->
+  <!-- Properties                                                    -->
+  <!-- ============================================================ -->
+  <xacro:property name="wheel_base"    value="0.32"/>   <!-- m -->
+  <xacro:property name="wheel_radius"  value="0.065"/>  <!-- m -->
+  <xacro:property name="wheel_width"   value="0.025"/>  <!-- m -->
+  <xacro:property name="chassis_l"     value="0.36"/>
+  <xacro:property name="chassis_w"     value="0.34"/>
+  <xacro:property name="chassis_h"     value="0.12"/>
+  <xacro:property name="chassis_mass"  value="6.0"/>    <!-- kg -->
+  <xacro:property name="wheel_mass"    value="0.3"/>
+  <xacro:property name="pi"            value="3.14159265358979"/>
+
+  <!-- ============================================================ -->
+  <!-- Inertia macros                                                -->
+  <!-- ============================================================ -->
+  <xacro:macro name="box_inertia" params="m l w h">
+    <inertia
+      ixx="${m*(w*w+h*h)/12}" ixy="0" ixz="0"
+      iyy="${m*(l*l+h*h)/12}" iyz="0"
+      izz="${m*(l*l+w*w)/12}"/>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertia
+      ixx="${m*(3*r*r+h*h)/12}" ixy="0" ixz="0"
+      iyy="${m*(3*r*r+h*h)/12}" iyz="0"
+      izz="${m*r*r/2}"/>
+  </xacro:macro>
+
+  <!-- ============================================================ -->
+  <!-- Base footprint (virtual frame at ground level)               -->
+  <!-- ============================================================ -->
+  <link name="base_footprint"/>
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child  link="base_link"/>
+    <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- Base link (chassis)                                           -->
+  <!-- ============================================================ -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="${chassis_l} ${chassis_w} ${chassis_h}"/>
+      </geometry>
+      <material name="dark_grey">
+        <color rgba="0.2 0.2 0.2 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${chassis_l} ${chassis_w} ${chassis_h}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="${chassis_mass}"/>
+      <xacro:box_inertia m="${chassis_mass}" l="${chassis_l}" w="${chassis_w}" h="${chassis_h}"/>
+    </inertial>
+  </link>
+
+  <!-- ============================================================ -->
+  <!-- Drive wheels                                                  -->
+  <!-- ============================================================ -->
+  <xacro:macro name="drive_wheel" params="side reflect">
+    <link name="${side}_wheel">
+      <visual>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="black">
+          <color rgba="0.1 0.1 0.1 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <xacro:cylinder_inertia m="${wheel_mass}" r="${wheel_radius}" h="${wheel_width}"/>
+      </inertial>
+    </link>
+    <joint name="${side}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child  link="${side}_wheel"/>
+      <origin xyz="0 ${reflect * wheel_base/2} 0" rpy="${-pi/2} 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:drive_wheel side="left"  reflect="1"/>
+  <xacro:drive_wheel side="right" reflect="-1"/>
+
+  <!-- ============================================================ -->
+  <!-- IMU link                                                      -->
+  <!-- ============================================================ -->
+  <link name="imu_link">
+    <inertial>
+      <mass value="0.01"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+    </inertial>
+  </link>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="imu_link"/>
+    <origin xyz="0 0 ${chassis_h/2}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ============================================================ -->
+  <!-- Include sensor mount (LiDAR + camera)                         -->
+  <!-- ============================================================ -->
+  <!-- xacro:include filename="$(find from_signal_to_system)/urdf/sensor_mount.urdf.xacro" -->
+
+</robot>

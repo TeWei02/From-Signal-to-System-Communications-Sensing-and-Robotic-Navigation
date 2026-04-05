@@ -1,0 +1,45 @@
+# scenario_indoor_corridor.yaml
+# Experiment scenario: indoor corridor navigation with varying bandwidth.
+#
+# This scenario evaluates navigation performance as the uplink bandwidth is swept
+# from 50 kbps (heavily constrained) to 2 Mbps (near-unlimited).  A single robot
+# navigates a predefined waypoint sequence in the office corridor environment.
+
+name: "indoor_corridor_bandwidth_sweep"
+description: >
+  Single-robot corridor navigation with 7 waypoints.
+  Bandwidth is swept in log steps from 50 kbps to 2 Mbps.
+  Primary metric: mean position error vs. bandwidth at waypoint arrival.
+
+world: "office_world"
+n_robots: 1
+robot_start_pose: {x: 1.0, y: 1.0, yaw: 0.0}
+
+waypoints:
+  - {x: 5.0,  y: 1.0,  yaw: 0.0,  label: "wp_1_corridor_A"}
+  - {x: 9.0,  y: 1.0,  yaw: 0.0,  label: "wp_2_junction"}
+  - {x: 9.0,  y: 5.0,  yaw: 1.57, label: "wp_3_turn_right"}
+  - {x: 5.0,  y: 5.0,  yaw: 3.14, label: "wp_4_corridor_B"}
+  - {x: 1.0,  y: 5.0,  yaw: 3.14, label: "wp_5_corner"}
+  - {x: 1.0,  y: 9.0,  yaw: 1.57, label: "wp_6_corridor_C"}
+  - {x: 5.0,  y: 9.0,  yaw: 0.0,  label: "wp_7_end"}
+
+bandwidth_sweep_bps:
+  - 50000
+  - 100000
+  - 250000
+  - 500000
+  - 1000000
+  - 2000000
+
+latency_ms: 30.0
+packet_loss_rate: 0.02
+map_update_strategy: "sparse_diff"
+max_steps_per_trial: 400
+n_trials_per_bw: 5           # number of Monte Carlo repetitions per bandwidth setting
+
+metrics:
+  - mean_waypoint_error_m
+  - max_waypoint_error_m
+  - total_path_length_m
+  - mean_bandwidth_utilization

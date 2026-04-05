@@ -1,0 +1,46 @@
+# scenario_multi_floor.yaml
+# Experiment scenario: two-robot exploration of a multi-floor environment.
+#
+# Tests map-merging across floors connected by a ramp. A key challenge is
+# maintaining consistent global frame registration when robots operate on
+# different Z-levels.
+
+name: "multi_floor_exploration"
+description: >
+  Two robots start on floor 0 and floor 1 respectively.
+  Robot 0 explores floor 0 and ascends to floor 1 via the ramp.
+  Robot 1 explores floor 1 from the far end.
+  The base station merges both local maps into a unified 2.5-D representation.
+
+world: "multi_floor_world"
+n_robots: 2
+robot_start_poses:
+  - {x: 2.0, y: 2.0, z: 0.0,  yaw: 0.0,  label: "robot_0_floor0"}
+  - {x: 2.0, y: 2.0, z: 3.0,  yaw: 3.14, label: "robot_1_floor1"}
+
+floors:
+  - id: 0
+    z_range: [-0.1, 1.5]
+    map_file: "data/maps/office_map_floor0.pgm"
+  - id: 1
+    z_range: [2.5, 4.5]
+    map_file: "data/maps/office_map_floor1.pgm"
+
+ramps:
+  - from_floor: 0
+    to_floor: 1
+    start_pose: {x: 8.0, y: 5.0, z: 0.0}
+    end_pose:   {x: 8.0, y: 5.0, z: 3.0}
+
+bandwidth_bps: 250000
+base_latency_ms: 40.0
+packet_loss_rate: 0.03
+map_update_strategy: "full_map"    # full map needed for floor registration
+max_steps: 600
+coverage_threshold: 0.80
+
+metrics:
+  - coverage_per_floor
+  - map_registration_error_m
+  - total_bandwidth_bytes
+  - time_to_coverage_threshold_s

@@ -1,0 +1,53 @@
+# sensors.yaml
+# Sensor configuration for all modalities.
+# Calibration intrinsics are illustrative; replace with measured values.
+
+lidar:
+  type: "velodyne_vlp16"          # sensor model identifier
+  topic_raw: "/robot/scan/raw"
+  topic_filtered: "/robot/scan/filtered"
+  frame_id: "lidar_link"
+  scan_rate_hz: 10.0
+  range_min: 0.3                  # metres
+  range_max: 30.0                 # metres
+  # Preprocessing thresholds
+  voxel_leaf_size: 0.05           # metres
+  outlier_k_neighbours: 20
+  outlier_std_ratio: 1.0
+  ransac_distance_threshold: 0.03 # metres (ground plane)
+  ransac_max_iterations: 100
+
+imu:
+  type: "imu_6dof"
+  topic_raw: "/robot/imu/raw"
+  topic_filtered: "/robot/imu/filtered"
+  frame_id: "imu_link"
+  rate_hz: 200.0
+  # Intrinsic noise parameters (typical MEMS IMU)
+  gyro_noise_density: 1.5e-4      # rad/s/√Hz
+  gyro_random_walk: 8.0e-6        # rad/s²/√Hz
+  accel_noise_density: 3.0e-3     # m/s²/√Hz
+  accel_random_walk: 4.0e-5       # m/s³/√Hz
+  # Complementary filter coefficient (0 = full gyro, 1 = full accel)
+  comp_filter_alpha: 0.02
+
+camera:
+  type: "monocular"
+  topic_raw: "/robot/camera/raw"
+  topic_undistorted: "/robot/camera/undistorted"
+  frame_id: "camera_link"
+  rate_hz: 30.0
+  image_width: 640
+  image_height: 480
+  # Brown-Conrady intrinsics (placeholder values)
+  fx: 525.0
+  fy: 525.0
+  cx: 319.5
+  cy: 239.5
+  distortion_model: "plumb_bob"
+  distortion_coeffs: [-0.28, 0.07, 0.0, 0.0, 0.0]
+  # Feature extraction
+  n_features: 500
+  feature_detector: "orb"
+  # Downscale before transmission (1.0 = no resize)
+  image_downscale: 0.5
