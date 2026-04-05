@@ -1,0 +1,18 @@
+# Generated figures (produced by running code/ scripts)
+code/figures/
+
+# Python byte-compiled / optimisation / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
