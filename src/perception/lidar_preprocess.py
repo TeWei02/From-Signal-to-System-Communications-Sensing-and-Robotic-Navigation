@@ -17,6 +17,8 @@ Dependencies (pip / apt):
     sensor_msgs
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false, reportPossiblyUnboundVariable=false, reportUnusedImport=false
+
 from __future__ import annotations
 
 import time
@@ -26,21 +28,23 @@ from typing import Optional
 import numpy as np
 
 # ROS2 imports — guarded so the module can be imported outside a ROS2 context
+ros2_available = False
 try:
     import rclpy
     from rclpy.node import Node
     from sensor_msgs.msg import PointCloud2
     from std_msgs.msg import Header
-    _ROS2_AVAILABLE = True
+    ros2_available = True
 except ImportError:
-    _ROS2_AVAILABLE = False
+    pass
 
 # Open3D is used for point cloud processing; fall back gracefully if absent.
+o3d_available = False
 try:
     import open3d as o3d
-    _O3D_AVAILABLE = True
+    o3d_available = True
 except ImportError:
-    _O3D_AVAILABLE = False
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +85,7 @@ def load_pointcloud_from_array(xyz: np.ndarray) -> "o3d.geometry.PointCloud":
         - Handle intensity and ring-index channels carried in extra columns.
         - Support structured numpy arrays from sensor_msgs_py.read_points().
     """
-    if not _O3D_AVAILABLE:
+    if not o3d_available:
         raise RuntimeError("open3d is not installed; cannot create PointCloud.")
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(xyz.astype(np.float64))
@@ -165,7 +169,7 @@ def segment_ground_plane(pcd: "o3d.geometry.PointCloud",
         - Extend to multi-planar segmentation for ramp / stair detection.
         - Label ground points rather than discarding them.
     """
-    plane_model, inlier_idxs = pcd.segment_plane(
+    _plane_model, inlier_idxs = pcd.segment_plane(
         distance_threshold=distance_threshold,
         ransac_n=3,
         num_iterations=max_iterations,
@@ -199,7 +203,7 @@ def estimate_normals(pcd: "o3d.geometry.PointCloud",
 
 
 def preprocess_scan(xyz: np.ndarray,
-                    cfg: LidarPreprocessConfig) -> dict:
+                    cfg: LidarPreprocessConfig) -> dict[str, object]:
     """Full preprocessing pipeline for a single LiDAR scan.
 
     Args:
@@ -240,9 +244,9 @@ def preprocess_scan(xyz: np.ndarray,
 # ROS2 node wrapper
 # ---------------------------------------------------------------------------
 
-if _ROS2_AVAILABLE:
+if ros2_available:
 
-    class LidarPreprocessNode(Node):
+    class LidarPreprocessNode(Node):  # pyright: ignore[reportUntypedBaseClass]
         """ROS2 node that wraps the LiDAR preprocessing pipeline.
 
         Subscribes to /robot/scan/raw (PointCloud2) and publishes to
@@ -284,7 +288,7 @@ if _ROS2_AVAILABLE:
 
 
 def main() -> None:
-    if not _ROS2_AVAILABLE:
+    if not ros2_available:
         print("rclpy not available — cannot run as a ROS2 node.")
         return
     rclpy.init()

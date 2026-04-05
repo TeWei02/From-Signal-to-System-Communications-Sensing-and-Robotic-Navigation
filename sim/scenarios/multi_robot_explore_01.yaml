@@ -1,0 +1,88 @@
+# multi_robot_explore_01.yaml
+# =============================
+# Multi-robot exploration scenario.
+#
+# Setup:
+#   - 3 robots exploring an office building
+#   - Limited bandwidth link to base station
+#   - Objective: achieve target coverage while minimizing communication volume
+#
+# Metrics tracked:
+#   - Coverage fraction over time
+#   - Total bytes transmitted/received
+#   - Latency distribution
+#   - Number of robots reaching goal
+
+world: office_world
+
+robots:
+  - id: "robot_001"
+    robot_template: "mobile_base"
+    start_x: 0.0
+    start_y: 0.0
+    start_theta: 0.0
+    goal_x: 15.0
+    goal_y: 5.0
+    color: [0.2, 0.8, 0.2]
+    
+    # Communication link to edge
+    uplink:
+      bandwidth_mbps: 2.0
+      latency_ms: 100
+      packet_loss_rate: 0.01
+    
+    # Sensor / perception QoS
+    perception_qos: "mapping_medium"    # Sparse differential updates
+    
+  - id: "robot_002"
+    robot_template: "mobile_base"
+    start_x: 5.0
+    start_y: 0.0
+    start_theta: 0.0
+    goal_x: 15.0
+    goal_y: 8.0
+    color: [0.2, 0.2, 0.8]
+    
+    uplink:
+      bandwidth_mbps: 2.0
+      latency_ms: 100
+      packet_loss_rate: 0.01
+    
+    perception_qos: "mapping_medium"
+  
+  - id: "robot_003"
+    robot_template: "mobile_base"
+    start_x: 10.0
+    start_y: 0.0
+    start_theta: 0.0
+    goal_x: 15.0
+    goal_y: 3.0
+    color: [0.8, 0.2, 0.2]
+    
+    uplink:
+      bandwidth_mbps: 2.0
+      latency_ms: 100
+      packet_loss_rate: 0.01
+    
+    perception_qos: "mapping_medium"
+
+# Simulation parameters
+sim_config:
+  time_step_ms: 10       # 10 ms = 100 Hz control loop
+  max_sim_time_s: 300
+  
+  # Sensor publishing frequencies
+  lidar_freq_hz: 10
+  imu_freq_hz: 100
+  
+  # Optimization / planning
+  local_planner_freq_hz: 5
+  global_planner_freq_hz: 1    # Base station planning once per second
+
+# Metrics / logging
+metrics:
+  log_state: true               # Log robot states at each step
+  log_communication: true       # Log all communication events
+  log_coverage: true            # Track coverage over time
+  save_final_map: true          # Save merged occupancy grid
+  coverage_resolution_m: 0.2    # Grid resolution for coverage calculation

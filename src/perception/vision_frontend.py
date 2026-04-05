@@ -18,6 +18,8 @@ TODO:
     - Add exposure / white-balance control via camera driver service calls.
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false, reportPossiblyUnboundVariable=false, reportUnusedImport=false
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -25,20 +27,22 @@ from typing import Optional
 
 import numpy as np
 
+cv2_available = False
 try:
     import cv2
-    _CV2_AVAILABLE = True
+    cv2_available = True
 except ImportError:
-    _CV2_AVAILABLE = False
+    pass
 
+ros2_available = False
 try:
     import rclpy
     from rclpy.node import Node
     from sensor_msgs.msg import Image
     from cv_bridge import CvBridge
-    _ROS2_AVAILABLE = True
+    ros2_available = True
 except ImportError:
-    _ROS2_AVAILABLE = False
+    pass
 
 
 @dataclass
@@ -48,7 +52,7 @@ class CameraIntrinsics:
     fy: float = 525.0
     cx: float = 319.5
     cy: float = 239.5
-    distortion_coeffs: tuple = (-0.28, 0.07, 0.0, 0.0, 0.0)
+    distortion_coeffs: tuple[float, float, float, float, float] = (-0.28, 0.07, 0.0, 0.0, 0.0)
     width: int = 640
     height: int = 480
 
@@ -79,14 +83,14 @@ def undistort_image(image: np.ndarray, intrinsics: CameraIntrinsics) -> np.ndarr
         - Cache the undistortion map (cv2.initUndistortRectifyMap) for speed.
         - Support fisheye model for wide-angle cameras.
     """
-    if not _CV2_AVAILABLE:
+    if not cv2_available:
         return image  # passthrough if OpenCV unavailable
     return cv2.undistort(image, intrinsics.K, intrinsics.D)
 
 
 def extract_orb_features(image: np.ndarray,
                           n_features: int = 500
-                          ) -> tuple[list, Optional[np.ndarray]]:
+                          ) -> tuple[list[object], Optional[np.ndarray]]:
     """Detect ORB keypoints and compute descriptors.
 
     Args:
@@ -100,7 +104,7 @@ def extract_orb_features(image: np.ndarray,
         - Implement uniform spatial distribution using a grid-based suppression.
         - Add subpixel refinement with cv2.cornerSubPix.
     """
-    if not _CV2_AVAILABLE:
+    if not cv2_available:
         return [], None
 
     grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
@@ -109,10 +113,10 @@ def extract_orb_features(image: np.ndarray,
     return keypoints, descriptors
 
 
-def match_features(desc_prev: np.ndarray,
-                   desc_curr: np.ndarray,
+def match_features(desc_prev: Optional[np.ndarray],
+                   desc_curr: Optional[np.ndarray],
                    ratio_thresh: float = 0.75
-                   ) -> list:
+                   ) -> list[object]:
     """Brute-force descriptor matching with Lowe ratio test.
 
     Args:
@@ -127,7 +131,7 @@ def match_features(desc_prev: np.ndarray,
         - Switch to FLANN-based matcher for larger descriptor sets.
         - Add geometric verification (fundamental matrix RANSAC).
     """
-    if not _CV2_AVAILABLE or desc_prev is None or desc_curr is None:
+    if not cv2_available or desc_prev is None or desc_curr is None:
         return []
 
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
@@ -139,9 +143,9 @@ def match_features(desc_prev: np.ndarray,
     return good_matches
 
 
-if _ROS2_AVAILABLE:
+if ros2_available:
 
-    class VisionFrontendNode(Node):
+    class VisionFrontendNode(Node):  # pyright: ignore[reportUntypedBaseClass]
         """ROS2 node wrapping the camera preprocessing and feature extraction pipeline."""
 
         def __init__(self, intrinsics: Optional[CameraIntrinsics] = None) -> None:
@@ -171,7 +175,7 @@ if _ROS2_AVAILABLE:
 
 
 def main() -> None:
-    if not _ROS2_AVAILABLE:
+    if not ros2_available:
         print("rclpy not available.")
         return
     rclpy.init()

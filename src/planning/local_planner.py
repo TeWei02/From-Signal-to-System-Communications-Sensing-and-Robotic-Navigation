@@ -19,6 +19,8 @@ References:
     IEEE Robotics & Automation Magazine, 1997.
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false, reportPossiblyUnboundVariable=false, reportUnusedImport=false
+
 from __future__ import annotations
 
 import math
@@ -27,14 +29,15 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
+ros2_available = False
 try:
     import rclpy
     from rclpy.node import Node
     from nav_msgs.msg import OccupancyGrid, Path, Odometry
     from geometry_msgs.msg import Twist, PoseStamped
-    _ROS2_AVAILABLE = True
+    ros2_available = True
 except ImportError:
-    _ROS2_AVAILABLE = False
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -251,9 +254,9 @@ class DWALocalPlanner:
 # ROS2 node
 # ---------------------------------------------------------------------------
 
-if _ROS2_AVAILABLE:
+if ros2_available:
 
-    class LocalPlannerNode(Node):
+    class LocalPlannerNode(Node):  # pyright: ignore[reportUntypedBaseClass]
         """ROS2 node wrapping the DWA local planner.
 
         Subscribes to /costmap, /robot/odom/fused, /robot/global_path.
@@ -268,7 +271,7 @@ if _ROS2_AVAILABLE:
             super().__init__("local_planner")
             self._planner = DWALocalPlanner()
             self._costmap: Optional[np.ndarray] = None
-            self._current_pose: Optional[Tuple] = None
+            self._current_pose: Optional[Tuple[float, float, float]] = None
             self._current_vel: Tuple[float, float] = (0.0, 0.0)
             self._goal: Optional[Tuple[float, float]] = None
             self._global_path: Optional[np.ndarray] = None
@@ -322,7 +325,7 @@ if _ROS2_AVAILABLE:
 
 
 def main() -> None:
-    if not _ROS2_AVAILABLE:
+    if not ros2_available:
         print("rclpy not available.")
         return
     rclpy.init()

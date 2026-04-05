@@ -16,7 +16,9 @@ Key parameters:
   scenario_file     : path to exploration_scenarios.yaml
 """
 
-from launch import LaunchDescription
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false
+
+from launch import LaunchDescription  # type: ignore
 from launch.actions import (
     DeclareLaunchArgument,
     GroupAction,

@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<!--
+warehouse_world.sdf
+--------------------
+Gazebo / SDF world description of a warehouse with large open floor,
+high shelving units, and narrow aisles.
+
+Suitable for:
+  - Multi-robot item picking / sorting scenarios
+  - Network connectivity mapping in large spaces
+  - Coverage planning under bandwidth constraints
+-->
+<sdf version="1.6">
+  <world name="warehouse_world">
+    
+    <physics type="ode">
+      <gravity>0 0 -9.8</gravity>
+    </physics>
+    
+    <light type="directional" name="sun">
+      <pose>0 0 15 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+    </light>
+    
+    <!-- Ground plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.6 1</ambient>
+          </material>
+        </visual>
+      </link>
+    </model>
+    
+    <!-- TODO: Add warehouse-specific features
+         - Shelving units (tall, narrow obstacles)
+         - Aisles (navigation corridors)
+         - Perimeter walls
+         - Door / loading dock
+    -->
+    
+  </world>
+</sdf>

@@ -96,3 +96,33 @@ via `/robot_N/diagnostics` so that link-quality degradation can be detected.
 - Filtered scans are optionally snapshotted as `.pcd` files in `data/maps/`.
 - Pre-computed analysis arrays (coverage, bandwidth traces) are stored as `.npz` in
   `data/generated/`.
+
+## Performance Characteristics
+
+| Stage | Input Rate | Output Rate | Latency | CPU Load |
+|-------|-----------|------------|---------|----------|
+| LiDAR preprocessing | 10 Hz, 30k pts | 10 Hz, 3-5k pts | ~40 ms | Medium |
+| IMU fusion | 200 Hz | 50 Hz odom | ~20 ms | Low |
+| Vision frontend | 30 Hz, 640×480 | 30 Hz, 500 features | ~35 ms | Medium |
+| SLAM scan-match | 10 Hz | 1 Hz pose/map | ~150 ms | High |
+| Time sync + dropout detection | — | — | <10 ms | Low |
+
+## Fallback Strategies
+
+- **LiDAR loss**: Switch to IMU + visual odometry (monocular scale is ambiguous, so
+  requires wheel odometry reference for metric accuracy)
+- **IMU loss**: Use LiDAR-only pose estimation (point-to-plane ICP) and wheel encoder
+  odometry for short-term dead reckoning
+- **Camera loss**: Continue with LiDAR + IMU fusion (no semantic segmentation, but
+  navigation remains viable)
+- **Complete sensor loss**: Robot defaults to manual control via base station if the
+  autonomous system is critical; otherwise, it stops in place.
+
+## Synchronization Edge Cases
+
+- **Temporal misalignment**: If frames arrive out-of-order (due to variable network
+  delays), a buffer window of ±100 ms allows for reordering
+- **High dropout rate**: If >20% of synchronization windows fail, the system logs a
+  WARNING and may reduce the target update rate for mapping to avoid backlog
+- **Clock drift**: No mechanism for clock synchronization across robots and base station
+  yet (TODO: NTP-like sync or GPS time at deployment time)

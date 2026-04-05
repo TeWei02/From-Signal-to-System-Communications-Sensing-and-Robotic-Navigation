@@ -14,21 +14,24 @@ TODO:
     - Support 3-D costmap slices for multi-floor environments.
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false, reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false, reportPossiblyUnboundVariable=false
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
-from scipy.ndimage import binary_dilation, distance_transform_edt
+from scipy.ndimage import distance_transform_edt
 
+ros2_available = False
 try:
     import rclpy
     from rclpy.node import Node
     from nav_msgs.msg import OccupancyGrid
-    _ROS2_AVAILABLE = True
+    ros2_available = True
 except ImportError:
-    _ROS2_AVAILABLE = False
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -78,8 +81,6 @@ def generate_costmap(occ_grid: np.ndarray,
     dist_pixels = distance_transform_edt(~obstacle_mask)
     dist_metres = dist_pixels * cfg.resolution
 
-    inflation_pixels = cfg.inflation_radius_m / cfg.resolution
-
     # Assign costs
     # Lethal zone: occupied cell or within half a resolution of it
     costmap[obstacle_mask] = cfg.lethal_cost
@@ -103,9 +104,9 @@ def generate_costmap(occ_grid: np.ndarray,
 # ROS2 node
 # ---------------------------------------------------------------------------
 
-if _ROS2_AVAILABLE:
+if ros2_available:
 
-    class CostmapGeneratorNode(Node):
+    class CostmapGeneratorNode(Node):  # pyright: ignore[reportUntypedBaseClass]
         """ROS2 node that generates a costmap from the occupancy grid.
 
         Subscribes to /map (nav_msgs/OccupancyGrid) and publishes /costmap
@@ -148,7 +149,7 @@ if _ROS2_AVAILABLE:
 
 
 def main() -> None:
-    if not _ROS2_AVAILABLE:
+    if not ros2_available:
         print("rclpy not available.")
         return
     rclpy.init()
