@@ -1,0 +1,20 @@
+# sim_run_002.bag
+#
+# ROS2 bag placeholder — recorded during simulation run 002 (two robots, warehouse
+# world, 8 minutes, sparse-diff map update strategy).
+#
+# Recorded topics:
+#   /robot_0/scan/filtered       sensor_msgs/PointCloud2    10 Hz
+#   /robot_1/scan/filtered       sensor_msgs/PointCloud2    10 Hz
+#   /robot_0/odom/fused          nav_msgs/Odometry          50 Hz
+#   /robot_1/odom/fused          nav_msgs/Odometry          50 Hz
+#   /robot_0/map/diff            nav_msgs/OccupancyGrid      1 Hz
+#   /robot_1/map/diff            nav_msgs/OccupancyGrid      1 Hz
+#   /global_map                  nav_msgs/OccupancyGrid      0.5 Hz
+#   /fleet/status                custom/FleetStatus          1 Hz
+#   /comms/link_stats            custom/LinkStats           10 Hz
+#
+# Duration   : ~480 s
+# Total size : ~320 MB
+# ROS distro : Humble
+# Bag format : MCAP v0.7

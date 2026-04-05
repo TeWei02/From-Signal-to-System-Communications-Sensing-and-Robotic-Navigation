@@ -1,0 +1,50 @@
+# comms_qos_profiles.yaml
+# DDS QoS profiles for ROS2 topics crossing the wireless link.
+# See docs/comms_architecture.md for usage guidance.
+
+profiles:
+
+  # Used for map diffs and navigation goals — critical, infrequent messages.
+  reliable_transient_local:
+    reliability: RELIABLE
+    durability: TRANSIENT_LOCAL
+    history: KEEP_LAST
+    depth: 10
+    deadline_ms: 500            # publisher must send within 500 ms
+    lifespan_ms: 10000          # message expires after 10 s if unread
+
+  # Used for odometry and raw scan streams — high rate, loss-tolerant.
+  best_effort_volatile:
+    reliability: BEST_EFFORT
+    durability: VOLATILE
+    history: KEEP_LAST
+    depth: 1
+    deadline_ms: 200
+
+  # Used for diagnostics and fleet status — guaranteed delivery, no persistence.
+  reliable_volatile:
+    reliability: RELIABLE
+    durability: VOLATILE
+    history: KEEP_LAST
+    depth: 5
+    deadline_ms: 1000
+
+# Topic-to-profile mapping
+topic_profiles:
+  "/robot/map/diff":            reliable_transient_local
+  "/robot/odom":                best_effort_volatile
+  "/robot/diagnostics":         reliable_volatile
+  "/robot/scan/compressed":     best_effort_volatile
+  "/robot/image/compressed":    best_effort_volatile
+  "/global_map":                reliable_transient_local
+  "/robot/goal":                reliable_transient_local
+  "/robot/plan_update":         reliable_transient_local
+  "/fleet/status":              reliable_volatile
+
+# Link simulator defaults (can be overridden at runtime)
+link_simulator:
+  bandwidth_bps: 500000         # 500 kbps uplink budget
+  base_latency_ms: 30.0
+  jitter_ms: 5.0
+  packet_loss_rate: 0.02
+  mtu_bytes: 1400

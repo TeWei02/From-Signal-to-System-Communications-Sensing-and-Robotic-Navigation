@@ -1,0 +1,24 @@
+# warehouse_map.pcd
+#
+# PCD (Point Cloud Data) placeholder — 3-D map of the warehouse environment
+# produced by the SLAM front-end node during a manual survey run.
+#
+# Format:    PCD v0.7
+# Fields:    x y z intensity
+# Size:      4 4 4 4
+# Type:      F F F F
+# Count:     1 1 1 1
+# Width:     125000      (number of points)
+# Height:    1           (unorganised cloud)
+# Viewpoint: 0 0 0 1 0 0 0
+# Points:    125000
+# Data:      binary_compressed
+#
+# This file would be produced by:
+#   ros2 run pcl_ros pointcloud_to_pcd  (with cloud topic /map/pointcloud)
+# or by the slam_frontend_node save_map service call.
+#
+# Approximate real-world extents:
+#   X: -15 m to +15 m (30 m wide)
+#   Y: -12 m to +12 m (24 m deep)
+#   Z:  0 m  to  6 m  (ceiling height)

@@ -1,0 +1,43 @@
+# robot_params.yaml
+# Top-level robot parameters shared across all nodes.
+# Override per-robot values by passing robot_id as a ROS2 parameter.
+
+robot:
+  name: "robot_0"
+  id: 0
+  footprint_radius: 0.18          # metres, used for costmap inflation
+  max_linear_velocity: 0.5        # m/s
+  max_angular_velocity: 1.0       # rad/s
+  max_linear_acceleration: 0.3    # m/s²
+  max_angular_acceleration: 1.5   # rad/s²
+  wheel_base: 0.32                # metres
+  wheel_radius: 0.065             # metres
+
+odometry:
+  publish_rate: 50.0              # Hz
+  frame_id: "odom"
+  child_frame_id: "base_link"
+
+slam:
+  use_imu: true
+  map_frame: "map"
+  odom_frame: "odom"
+  base_frame: "base_link"
+  scan_matching_method: "gicp"    # options: icp, gicp, ndt
+  submap_size: 100                # scans per submap
+  loop_closure_search_radius: 5.0 # metres
+
+planning:
+  global_planner: "astar"         # options: astar, dijkstra, rrt_star
+  local_planner: "dwa"            # options: dwa, teb, mpc_stub
+  planning_frequency: 10.0        # Hz (local planner)
+  replan_frequency: 0.5           # Hz (global planner)
+  goal_tolerance_xy: 0.1          # metres
+  goal_tolerance_yaw: 0.1         # radians
+
+logging:
+  record_raw: false               # set true to write .bag files
+  bag_output_dir: "data/logs"
+  log_level: "INFO"
+  save_pcd_snapshots: false
+  pcd_snapshot_dir: "data/maps"

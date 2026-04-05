@@ -1,0 +1,15 @@
+P5
+# office_map.pgm
+# Portable GreyMap (binary) — 2-D occupancy grid of the office environment.
+# Resolution: 0.05 m/pixel   Size: 400 x 320 pixels  (~20 m x 16 m)
+# White (255) = free space, Black (0) = obstacle, Grey (205) = unknown.
+#
+# This is a placeholder text stub.  In a real deployment this file would be a
+# binary PGM produced by ros2 run nav2_map_server map_saver_cli or by the
+# occupancy_grid_mapper when save_map() is called.
+#
+# To regenerate from a bag file:
+#   ros2 run nav2_map_server map_saver_cli -f data/maps/office_map \
+#       --ros-args -p use_sim_time:=false
+400 320
+255
