@@ -176,11 +176,9 @@ from-signal-to-system/
 │   ├── run_sim_local_nav.sh
 │   └── run_multi_robot_explore.sh
 │
-├── data/                              # Simulation results & assets
-│   ├── logs/                          # ROS2 bag files (example format)
+├── data/                              # Simulation assets
 │   ├── maps/                          # Occupancy grids (.pgm, .yaml), point clouds (.pcd)
-│   ├── scenarios/                     # Scenario YAML configs (reference)
-│   └── generated/                     # Simulation outputs (.npz, stats)
+│   └── scenarios/                     # Scenario YAML configs (reference)
 │
 └── report/                            # LaTeX technical paper
     └── report.tex                     # Use in Overleaf by copying body into a template
