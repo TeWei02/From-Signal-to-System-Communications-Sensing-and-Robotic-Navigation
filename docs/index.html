@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From Signal to System — Communications, Sensing and Robotic Navigation</title>
+<meta name="description" content="可重現的機器人導航資訊流模型：網格世界探索、延遲模型與 LiDAR 鏈路預算，全部在同一組種子下以 Python 與瀏覽器雙語實作對照。">
+<meta name="theme-color" content="#0b111c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Robotic navigation as an end-to-end communication system</div>
+    <h1>From Signal to System</h1>
+    <p class="lede">
+      這個頁面把倉庫裡的三個模型搬到瀏覽器上直接執行：有限頻寬下的多機器人探索、
+      通訊延遲造成的航位偏差、以及 LiDAR 串流的鏈路預算。所有數字都來自同一組固定種子，
+      可用倉庫內的 Python 腳本逐位元重現。
+    </p>
+    <div class="tagrow">
+      <span class="tag">ROS 2 套件骨架</span>
+      <span class="tag">Python 模型（無 ROS 環境亦可執行）</span>
+      <span class="tag" id="tag-parity">JS ↔ Python 對照：檢查中…</span>
+      <span class="tag warn">無硬體、無實測資料</span>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <div class="tabs-inner">
+    <button role="tab" data-panel="overview" aria-selected="true">總覽 Overview</button>
+    <button role="tab" data-panel="exploration" aria-selected="false">探索案例 Case study</button>
+    <button role="tab" data-panel="latency" aria-selected="false">延遲實驗室 Latency</button>
+    <button role="tab" data-panel="link" aria-selected="false">鏈路預算 Link budget</button>
+    <button role="tab" data-panel="report" aria-selected="false">報告 Report</button>
+    <button role="tab" data-panel="reproduce" aria-selected="false">重現與驗證 Reproduce</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- ============================ OVERVIEW ============================ -->
+<section class="panel active" id="panel-overview">
+  <h2>總覽 Overview</h2>
+  <p class="sub">一條從實體訊號到系統決策的資訊流，以及沿路上每個環節的取捨。</p>
+
+  <div class="card">
+    <h3>資訊流資訊鏈</h3>
+    <div class="pipeline">
+      <div class="stage"><div class="n">01 SIGNAL</div><div class="t">感測擷取</div><div class="d">LiDAR / IMU / 相機，100&thinsp;Hz–20&thinsp;Hz 不同速率與時戳</div></div>
+      <div class="stage"><div class="n">02 PERCEPTION</div><div class="t">感知與建圖</div><div class="d">佔據網格、SLAM、感測融合，誤差隨時間累積</div></div>
+      <div class="stage"><div class="n">03 PLANNING</div><div class="t">規劃與控制</div><div class="d">DWA / MPC 取樣、PID 跟隨，受限於機上算力與功耗</div></div>
+      <div class="stage"><div class="n">04 LINK</div><div class="t">無線鏈路</div><div class="d">頻寬、往返延遲、丟包，直接改變導航品質</div></div>
+      <div class="stage"><div class="n">05 EDGE</div><div class="t">邊緣卸載</div><div class="d">算力–通訊權衡，決定要送多少資訊出去</div></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>這個倉庫裡有什麼</h3>
+      <dl class="kv">
+        <dt>ROS 2 套件</dt><dd><code>src/</code>：perception / mapping / planning / control / comms 五個節點群，含 <code>cpp</code> 控制器與 <code>urdf</code> 底盤描述</dd>
+        <dt>可執行模型</dt><dd><code>tools/coverage_model.py</code>（探索）、<code>analysis/</code>（延遲、鏈路預算、更新率）</dd>
+        <dt>技術報告</dt><dd><code>report/report.tex</code>，本頁「報告」分頁為其可讀版本</dd>
+        <dt>設計文件</dt><dd><code>docs/design_overview.md</code>、<code>sensing_pipeline.md</code>、<code>comms_architecture.md</code></dd>
+        <dt>本頁</dt><dd>離線可安裝的 PWA，內含與 Python 相同的模型實作</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h3>這個倉庫裡沒有的東西</h3>
+      <ul class="clean">
+        <li>沒有實機、沒有測試台、沒有場域資料。</li>
+        <li>沒有在 ROS 2 環境中啟動過節點，因此沒有任何 <code>ros2 launch</code> 的執行紀錄。</li>
+        <li>沒有任何量測得到的實驗數據：報告中的案例研究是<strong>假設情境</strong>，數字來自解析式與資料表等級的假設。</li>
+        <li>沒有模型權重、沒有訓練資料集。</li>
+      </ul>
+      <div class="note"><strong>誠實標註</strong>：本頁所有圖表都標明「模型輸出」或「假設情境」，與實測數據嚴格區分。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>三個可以馬上動手的模型</h3>
+    <div class="grid-3">
+      <div>
+        <h3 style="margin-top:0">有限頻寬探索</h3>
+        <p style="color:var(--muted);font-size:14px;margin:0">兩台機器人在 40×40 網格上探索，比較「整張地圖上傳」與「只傳變化格」的覆蓋率差距。可互動、可重跑。</p>
+      </div>
+      <div>
+        <h3 style="margin-top:0">延遲死區</h3>
+        <p style="color:var(--muted);font-size:14px;margin:0">命令往返延遲 τ 與速度 v 造成 <code>v·τ</code> 的航位偏差；找出 0.1&thinsp;m 容許值下的延遲上限。</p>
+      </div>
+      <div>
+        <h3 style="margin-top:0">鏈路預算</h3>
+        <p style="color:var(--muted);font-size:14px;margin:0">原始 / 降採樣 / 差異更新三種資料流的頻寬需求，以及在給定頻寬下可達到的更新率。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ EXPLORATION ============================ -->
+<section class="panel" id="panel-exploration">
+  <h2>有限頻寬下的多機器人探索</h2>
+  <p class="sub">假設情境：兩台地面機器人、一台邊緣伺服器、共享一條上傳鏈路。地圖為 40×40 佔據網格，兩台機器人分別從自由空間的固定比例位置出發。</p>
+
+  <div class="card">
+    <div class="controls">
+      <div class="field">
+        <label for="strategy">傳輸策略</label>
+        <select id="strategy">
+          <option value="diff" selected>差異更新（只傳變化格）</option>
+          <option value="full">整張地圖上傳</option>
+        </select>
+      </div>
+      <div class="field" id="budgetField">
+        <label for="budget">每步每台機器人的格數預算：<span id="budgetValue" class="mono">8</span></label>
+        <input type="range" id="budget" min="1" max="20" step="1" value="8">
+      </div>
+      <button class="action" id="runBtn">執行 / 暫停</button>
+      <button class="action ghost" id="resetBtn">回到開頭</button>
+      <button class="action ghost" id="fastBtn">直接跑到第 200 步</button>
+    </div>
+
+    <div class="canvas-wrap">
+      <div>
+        <canvas id="gridCanvas" width="800" height="800" aria-label="佔據網格與機器人位置"></canvas>
+        <div class="legend">
+          <span><span class="swatch" style="background:#0e1729"></span>未探索</span>
+          <span><span class="swatch" style="background:#38d39f"></span>伺服器已收到</span>
+          <span><span class="swatch" style="background:#f2b544"></span>僅存於機器人（未傳出）</span>
+          <span><span class="swatch" style="background:#24314f"></span>障礙物</span>
+          <span><span class="swatch" style="background:#4da3ff;border-radius:50%"></span>機器人</span>
+        </div>
+      </div>
+      <div>
+        <canvas id="coverageCanvas" height="300" aria-label="覆蓋率曲線"></canvas>
+        <div class="stats">
+          <div class="stat"><div class="k">Simulation step</div><div class="v" id="statStep">0 / 200</div></div>
+          <div class="stat"><div class="k">Simulated wall-clock</div><div class="v" id="statTime">0.0 s</div></div>
+          <div class="stat"><div class="k">Server map coverage</div><div class="v server" id="statServer">0.0 %</div></div>
+          <div class="stat"><div class="k">On-board coverage</div><div class="v local" id="statLocal">0.0 %</div></div>
+          <div class="stat"><div class="k">Gap (local − server)</div><div class="v" id="statGap">0.0 pp</div></div>
+          <div class="stat"><div class="k">Transmitted cells</div><div class="v" id="statTx">0</div></div>
+          <div class="stat"><div class="k">Cells left in backlog</div><div class="v" id="statBacklog">0</div></div>
+          <div class="stat"><div class="k">Uplink load @5 Hz</div><div class="v" id="statKbps">0 kbps</div></div>
+        </div>
+        <p class="sub" id="refNote" style="margin:12px 0 0;font-size:13px"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>已提交的參考結果</h3>
+      <p class="sub" style="margin-bottom:10px;font-size:13px">由 <code>tools/coverage_model.py</code> 在同一組種子下產生，瀏覽器版本必須逐位元一致。</p>
+      <table id="refTable">
+        <thead><tr><th>設定</th><th class="num">每步預算</th><th class="num">最終覆蓋率</th><th class="num">傳輸格數總計</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>每步預算掃描（差異更新）</h3>
+      <p class="sub" style="margin-bottom:10px;font-size:13px">預算低於「機器人學到新格的速度」時，伺服器地圖會落後且無法追上。</p>
+      <canvas id="sweepCanvas" height="260" aria-label="預算掃描"></canvas>
+    </div>
+  </div>
+
+  <div class="honest">
+    <strong>這是模擬。</strong>網格世界、感測半徑與移動規則都是簡化模型：沒有感測雜訊、沒有封包遺失、沒有 SLAM 誤差，通訊成本以「格數」計而非以位元計。
+    它的用途是讓「資料表示法與傳輸策略會改變導航表現」這件事可以被重複檢驗，而不是預測某個真實場域的覆蓋率。
+  </div>
+</section>
+
+<!-- ============================ LATENCY ============================ -->
+<section class="panel" id="panel-latency">
+  <h2>延遲造成的航位偏差</h2>
+  <p class="sub">若命令在往返延遲 τ 之後才生效，機器人已偏離當初計算命令時的位置約 <code>v·τ</code>。</p>
+
+  <div class="card">
+    <div class="controls">
+      <div class="field">
+        <label for="rtt">往返延遲 τ：<span id="rttValue" class="mono">200 ms</span></label>
+        <input type="range" id="rtt" min="0" max="500" step="10" value="200">
+      </div>
+      <div class="field">
+        <label for="speed">機器人速度 v：<span id="speedValue" class="mono">0.5 m/s</span></label>
+        <input type="range" id="speed" min="0.1" max="2.0" step="0.1" value="0.5">
+      </div>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="latencyCanvas" height="340" aria-label="延遲與誤差關係"></canvas>
+      <div>
+        <div class="stats" style="margin-top:0">
+          <div class="stat"><div class="k">Dead-band error v·τ</div><div class="v" id="latErr">0.100 m</div></div>
+          <div class="stat"><div class="k">τ at 0.1 m tolerance</div><div class="v" id="latMax">200 ms</div></div>
+          <div class="stat"><div class="k">Jitter σ (modelled)</div><div class="v" id="latJit">20 ms</div></div>
+        </div>
+        <table id="latencyTable" style="margin-top:12px">
+          <thead><tr><th>速度 v</th><th class="num">v·τ @ τ</th><th class="num">τ 上限 (0.1 m)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="honest">
+    這是<strong>一階解析模型</strong>，不是量測結果：假設環境在 τ 內不變、控制器無補償、且誤差只來自死區位移。
+    真實系統還會受到封包抖動、時戳錯位與控制器頻寬的影響，因此實際退化通常比這條直線更陡。
+  </div>
+</section>
+
+<!-- ============================ LINK ============================ -->
+<section class="panel" id="panel-link">
+  <h2>LiDAR 串流的鏈路預算</h2>
+  <p class="sub">三種資料表示法在相同感測器下的上傳需求，以及在給定可用頻寬下能維持的更新率。</p>
+
+  <div class="card">
+    <div class="controls">
+      <div class="field">
+        <label for="bandwidth">可用上傳頻寬：<span id="bwValue" class="mono">5 Mbps</span></label>
+        <input type="range" id="bandwidth" min="0.5" max="60" step="0.5" value="5">
+      </div>
+    </div>
+    <canvas id="linkCanvas" height="330" aria-label="頻寬需求與更新率"></canvas>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>模型設定</h3>
+      <table id="linkTable">
+        <thead><tr><th>資料流</th><th class="num">@10 Hz</th><th class="num">目前頻寬下可達</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="sub" style="margin:12px 0 0;font-size:13px">
+        <code>analysis/plot_bandwidth_vs_update_rate.py</code> 的線性模型：需求 = <code>base × rate / 10</code>，可達更新率取需求不超過頻寬的最大整數值，上限 30&thinsp;Hz。
+      </p>
+    </div>
+    <div class="card">
+      <h3>頻寬假設從哪來</h3>
+      <ul class="clean" style="font-size:14px">
+        <li>原始點雲：100,000 點 × 3 個 4-byte 座標 ≈ 1.2&thinsp;MB / 掃描，10&thinsp;Hz 未壓縮約 100&thinsp;Mbps；模型以壓縮後的 50&thinsp;Mbps 為代表值。</li>
+        <li>降採樣 / 特徵化：約 5&thinsp;Mbps。</li>
+        <li>佔據網格差異更新：約 0.5&thinsp;Mbps。</li>
+      </ul>
+      <div class="note"><strong>量級假設，非量測。</strong>這些是資料表等級的數量級，用來比較相對關係；它們不宣稱任何特定感測器或網路的實測吞吐量。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ REPORT ============================ -->
+<section class="panel" id="panel-report">
+  <h2>技術報告</h2>
+  <p class="sub">《From Signal to System: The Intersection of Communications, Sensing, and Robotic Navigation》——把八個環節串成一條資訊流，並以一個假設情境收尾。</p>
+
+  <div class="card">
+    <h3>章節</h3>
+    <ul class="clean">
+      <li>1 導論：為何機器人導航可以當成通訊系統來看</li>
+      <li>2 感測與訊號擷取：雜訊模型、時戳同步、SNR</li>
+      <li>3 感知與建圖：SLAM、佔據網格、EKF 感測融合</li>
+      <li>4 區域規劃與機上運算：DWA / MPC、功耗與算力共同設計</li>
+      <li>5 導航系統中的通訊：頻寬 B、延遲 τ、丟包率 p<sub>ℓ</sub></li>
+      <li>6 邊緣與雲端卸載：<code>C = C_local(λ) + C_comm(λ) + C_edge(λ)</code></li>
+      <li>7 案例研究：2&thinsp;Mbps 共享鏈路下的兩機探索（假設情境）</li>
+      <li>8 結論與未來方向：語意通訊、學習式壓縮、多機非同步協調</li>
+    </ul>
+    <p style="margin:14px 0 0">
+      <a href="report.html">閱讀完整報告（HTML 版）→</a>
+    </p>
+  </div>
+
+  <div class="honest">
+    報告是<strong>設計研究</strong>：案例研究為假設情境，出現的數字為解析結果或資料表等級的數量級假設，全文不引用外部文獻、也不宣稱任何量測結果。
+  </div>
+</section>
+
+<!-- ============================ REPRODUCE ============================ -->
+<section class="panel" id="panel-reproduce">
+  <h2>重現與驗證</h2>
+  <p class="sub">三個模型都可以只用 Python 重跑；本頁的 JavaScript 實作與 Python 在同一組種子下必須輸出相同數字。</p>
+
+  <div class="card">
+    <h3>1. 產生參考資料集（純 Python，不需要 ROS 2）</h3>
+    <pre class="code">git clone https://github.com/TeWei02/From-Signal-to-System-Communications-Sensing-and-Robotic-Navigation
+cd From-Signal-to-System-Communications-Sensing-and-Robotic-Navigation
+python3 -m pip install numpy            # 只有 coverage_model 需要
+
+python3 tools/coverage_model.py         # 印出探索模型結果與檢查碼
+python3 tools/build_web_data.py        # 重新產生 docs/data/reference.json
+jsc tools/verify_engine.js             # macOS 內建 JavaScriptCore，逐位元比對瀏覽器引擎</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. 本頁在瀏覽器內的即時驗證</h3>
+    <p class="sub" style="font-size:13px">下方表格由本頁的 <code>engine.js</code> 當場重算，再與 <code>docs/data/reference.json</code> 的已提交數值比較，容差 1e-9。</p>
+    <table id="verifyTable">
+      <thead><tr><th>檢查項目</th><th>結果</th><th class="num">樣本數</th></tr></thead>
+      <tbody><tr><td colspan="3">檢查中…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>3. ROS 2 部分與環境限制</h3>
+    <p style="font-size:14px">
+      <code>src/</code> 下的節點、套件描述與 URDF 是 ROS 2 工作區的<strong>骨架</strong>：介面、話題與節點職責已定義，但沒有在本機或任何 CI 環境中啟動過。
+      因此倉庫不提供 <code>colcon build</code> 的成功紀錄、不提供 Gazebo 世界檔、也不宣稱節點可在特定 ROS 2 版本上執行。
+      要在真實環境重現，需要自備 ROS 2 發行版、Gazebo 與對應的感測器外掛。
+    </p>
+    <div class="note"><strong>不可重現的部分已明確列出</strong>：沒有硬體、沒有場域資料、沒有訓練好的模型、沒有 ROS 2 執行紀錄；只有模型與文件是可重現的。</div>
+  </div>
+</section>
+
+<footer>
+  From Signal to System · MIT License · Te-Wei Ko ·
+  <a href="report.html">報告</a> ·
+  <a href="https://github.com/TeWei02/From-Signal-to-System-Communications-Sensing-and-Robotic-Navigation">GitHub</a>
+</footer>
+</div>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

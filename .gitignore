@@ -1,6 +1,10 @@
 # Generated figures (produced by running code/ scripts)
 code/figures/
 
+# Analysis figures (produced by running analysis/ scripts)
+analysis/*.pdf
+/*.pdf
+
 # Python byte-compiled / optimisation / DLL files
 __pycache__/
 *.py[cod]

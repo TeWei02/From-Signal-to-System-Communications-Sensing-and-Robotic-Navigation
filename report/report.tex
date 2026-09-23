@@ -1,5 +1,5 @@
 \title{From Signal to System: The Intersection of Communications, Sensing, and Robotic Navigation}
-\author{}
+\author{Te-Wei Ko}
 \date{}
 
 \maketitle
@@ -17,6 +17,8 @@ transmitted, and fused under resource limitations, and we illustrate these ideas
 a hypothetical multi-robot indoor exploration scenario.
 The goal is to motivate a systems-level perspective that bridges communications engineering
 and robotics, two fields that share a common mathematical vocabulary but are rarely treated together.
+This is a design study: the case study is hypothetical, the reported figures are analytical
+results or data-sheet order-of-magnitude assumptions, and no experimental measurement is claimed.
 \end{abstract}
 
 % ------------------------------------------------------------------
@@ -93,10 +95,10 @@ Signal quality can be characterised by the signal-to-noise ratio
 where \(P_s\) is the useful signal power and \(P_n\) the noise power.
 For LiDAR, low SNR arises in rain, fog, or specular surfaces; for cameras it arises in
 low-light or high-dynamic-range scenes.
-Previous works have shown that adaptive sampling strategies---reducing sensor update
-rates when the environment is static, or increasing resolution near obstacles---can
-maintain navigation accuracy while reducing the data volume that must be processed or
-transmitted downstream.
+Within the design argument followed here, adaptive sampling strategies---reducing sensor
+update rates when the environment is static, or increasing resolution near obstacles---are
+expected to maintain navigation accuracy while reducing the data volume that must be
+processed or transmitted downstream; quantifying that expectation is left to future work.
 
 % ------------------------------------------------------------------
 \section{Perception and Mapping: From Raw Data to Representations}
@@ -179,7 +181,7 @@ every layer.
 A designer may choose a sparser occupancy grid (lower resolution) to reduce memory
 bandwidth, or may throttle the local planner's sampling rate to stay within a power
 budget.
-Previous works have shown that algorithm complexity and hardware capability must be
+The design consequence is that algorithm complexity and hardware capability must be
 co-designed, especially as robots shrink toward micro-UAV sizes where the available
 compute budget may be as low as a few watts.
 This tight coupling between computation, power, and communication will be revisited in
@@ -201,9 +203,11 @@ that directly affect navigation: available bandwidth \(B\), round-trip latency \
 and packet loss rate \(p_{\ell}\).
 
 Bandwidth limits the rate at which data can be transferred between robot and server.
-A single full-resolution LiDAR scan of 100\,000 points at 4 bytes per coordinate
-requires approximately 1.2\,Mbps at 10\,Hz, which is non-trivial for a congested
-Wi-Fi network or a cell with several other users.
+A single full-resolution LiDAR scan of 100\,000 points at three 4-byte coordinates each
+occupies about 1.2\,MB, i.e.\ roughly 100\,Mbps if streamed at 10\,Hz uncompressed---far
+beyond a congested Wi-Fi cell shared with several other users. The analysis scripts in
+this repository therefore start from a 50\,Mbps budget for a raw but compressed stream,
+5\,Mbps for a downsampled stream, and 0.5\,Mbps for an occupancy-difference stream.
 Sending raw point clouds is therefore often impractical; instead, the robot transmits
 compressed or pre-processed representations---downsampled point clouds, occupancy map
 updates, or pose estimates only---at the cost of information loss.
@@ -220,9 +224,9 @@ For a robot moving at \(0.5\,\text{m/s}\) with \(\tau = 200\,\text{ms}\), this d
 displacement is \(0.1\,\text{m}\)---already significant in a corridor environment.
 Packet loss forces retransmission or interpolation and can cause sudden discontinuities
 in the received data stream that manifest as jumps in localization quality.
-Previous works have demonstrated that navigation error increases roughly linearly with
-mean latency in the low-latency regime and degrades more steeply once \(\tau\) exceeds a
-system-dependent threshold.
+The first-order model used here gives a dead-band displacement that grows linearly with
+mean latency; real systems are expected to degrade more steeply once \(\tau\) exceeds a
+threshold that depends on the controller and on how quickly the environment changes.
 
 % ------------------------------------------------------------------
 \section{Edge/Cloud Offloading and System-Level Trade-offs}
@@ -255,9 +259,9 @@ From a communications standpoint, the data sent to the edge is a form of \emph{s
 coding}: the robot must compress its sensor observations to fit the available channel.
 A natural metric is the \emph{rate-distortion} perspective: how much navigation
 performance (distortion) degrades as the transmission rate decreases.
-Previous works have shown that sending semantically compressed updates---for example,
-changed cells in an occupancy grid rather than a full map snapshot---can achieve
-substantial bandwidth savings with minimal impact on downstream planning quality.
+Sending semantically compressed updates---for example, changed cells in an occupancy
+grid rather than a full map snapshot---is the natural way to obtain bandwidth savings
+without discarding the information the planner actually consumes.
 As 5G and eventually 6G networks lower latency and raise throughput, the boundary of
 what can practicably be offloaded will shift outward, enabling more robots to depend on
 edge resources for safety-critical functions.
@@ -292,8 +296,9 @@ of robots quickly saturates the channel.
 
 In the second strategy, each robot sends only the \emph{cells that have changed}
 since the last transmitted update, together with its current pose estimate.
-In a typical exploration scenario, the frontier of newly explored space is a thin
-boundary; empirically, fewer than 5\% of cells change between consecutive scans.
+In the scenario assumed here the frontier of newly explored space is a thin boundary, so
+we take fewer than 5\% of the cells to change between consecutive scans; the portable model
+in \texttt{tools/coverage\_model.py} measures this quantity directly.
 This reduces the per-update payload to roughly 1\,kB, or about 40\,kbps per robot at
 5\,Hz, a reduction of approximately \(20\times\).
 The saved bandwidth can be reallocated to higher-frequency pose updates or video
@@ -308,9 +313,10 @@ triggered.
 A simple coverage metric, defined as the fraction of reachable cells that have been
 observed, allows quantitative comparison of the two strategies under a simulated
 bandwidth bottleneck.
-Previous works have shown that differential update schemes can maintain within
-5--10\% of the coverage rate of full-upload schemes while using a fraction of the
-bandwidth, provided the server applies lightweight map-merging heuristics.
+The grid-world model released with this report reproduces that ordering on synthetic
+occupancy grids: differential updates reach the coverage of a full upload once the
+per-step cell budget exceeds the rate at which the robots learn new cells, and fall well
+behind when the budget sits below it.
 The latency introduced by packet queuing under Strategy A during periods of high
 channel load can cause the robots to act on stale frontier assignments, reducing
 coverage efficiency; Strategy B, being leaner, suffers less from this effect.

@@ -114,15 +114,16 @@ def plot_achievable_rates(available_bandwidth_mbps: list[float] | None = None,
     for bw in available_bandwidth_mbps:
         row = [f"{bw:.1f}"]
         for compression in LiDARCompression:
-            # Binary search for max achievable rate
-            max_rate = 1
+            # Highest rate whose required bandwidth fits in ``bw``; 0 means
+            # that even the slowest rate does not fit (not achievable).
+            max_rate = 0
             for rate in range(1, 31):
                 required_bw = estimate_lidar_bandwidth(rate, compression)
                 if required_bw <= bw:
                     max_rate = rate
                 else:
                     break
-            row.append(f"{max_rate} Hz")
+            row.append(f"{max_rate} Hz" if max_rate else "not achievable")
         rows.append(row)
     
     cols = ["Bandwidth"] + [c.value.title() for c in LiDARCompression]
